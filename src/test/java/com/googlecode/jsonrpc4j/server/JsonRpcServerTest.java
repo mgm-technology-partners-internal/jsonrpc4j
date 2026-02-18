@@ -206,7 +206,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String responseError = "{\"jsonrpc\":\"2.0\",\"id\":0,\"error\":{\"code\":-32001,\"message\":\"" +
@@ -236,7 +235,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String returnString = "test";
@@ -269,7 +267,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String returnString = "test";

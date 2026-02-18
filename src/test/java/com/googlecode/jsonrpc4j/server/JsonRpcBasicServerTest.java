@@ -178,7 +178,8 @@ public class JsonRpcBasicServerTest {
 			messageWithListParamsStream(1, "voidMethod", intParam1),
 			byteArrayOutputStream
 		);
-		assertNull(decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
+		// In Jackson 3, NullNode.asString() returns "" instead of null, so use isNull() instead
+		assertTrue(decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).isNull());
 		EasyMock.verify(mockService);
 	}
 	
@@ -388,12 +389,11 @@ public class JsonRpcBasicServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"overloadedMethod\",\n" +
 				"  \"params\": [\"test.cool\",\"test.ru\"]\n" +
-				"  }\n" +
 				"}";
 		final String responseGood = "{\n" +
                 "  \"jsonrpc\": \"2.0\",\n" +
                 "  \"id\": 0,\n" +
-				"  \"result\": \"test.ru\"}\n" +
+				"  \"result\": \"test.ru\"\n" +
 				"}";
         Iterator<JsonNode> paramsIterator = mapper.readTree(requestGood).at("/params").iterator();
         List<JsonNode> paramsNodes = new ArrayList<>();

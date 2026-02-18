@@ -1,5 +1,6 @@
 package com.googlecode.jsonrpc4j.util;
 
+import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
@@ -119,7 +120,10 @@ public class Util {
 	}
 	
 	public static JsonNode decodeAnswer(ByteArrayOutputStream byteArrayOutputStream) throws IOException {
-		return mapper.readTree(byteArrayOutputStream.toString(JSON_ENCODING));
+		// Use JsonParser to read only the first JSON value, ignoring any trailing content
+		// This is necessary because Jackson 3 by default fails on trailing tokens
+		JsonParser parser = mapper.createParser(byteArrayOutputStream.toString(JSON_ENCODING));
+		return (JsonNode) parser.readValueAsTree();
 	}
 	
 	public static JsonNode errorCode(JsonNode error) {
