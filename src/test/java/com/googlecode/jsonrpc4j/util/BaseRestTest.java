@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcHttpClient;
 import com.googlecode.jsonrpc4j.spring.rest.JsonRpcRestClient;
 import org.junit.After;

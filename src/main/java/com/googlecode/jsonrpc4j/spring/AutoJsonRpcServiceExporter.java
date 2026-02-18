@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.spring;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.ConvertedParameterTransformer;
 import com.googlecode.jsonrpc4j.ErrorResolver;
 import com.googlecode.jsonrpc4j.HttpStatusCodeProvider;

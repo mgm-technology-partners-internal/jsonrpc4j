@@ -1,7 +1,8 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,10 +13,12 @@ public class ReadContext {
 	
 	private final InputStream input;
 	private final ObjectMapper mapper;
+	private final JsonParser parser;
 	
 	private ReadContext(InputStream input, ObjectMapper mapper) {
 		this.input = new NoCloseInputStream(input);
 		this.mapper = mapper;
+		this.parser = mapper.createParser(this.input);
 	}
 	
 	public static ReadContext getReadContext(InputStream input, ObjectMapper mapper) {
@@ -23,7 +26,7 @@ public class ReadContext {
 	}
 	
 	public JsonNode nextValue() throws IOException {
-		return mapper.readValue(input, JsonNode.class);
+		return parser.readValueAsTree();
 	}
 	
 	public void assertReadable() throws IOException {

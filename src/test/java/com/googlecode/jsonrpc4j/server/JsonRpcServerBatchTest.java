@@ -1,7 +1,7 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 import com.googlecode.jsonrpc4j.server.JsonRpcServerAnnotatedParamTest.ServiceInterfaceWithParamNameAnnotation;
 import com.googlecode.jsonrpc4j.util.Util;
@@ -14,7 +14,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.util.StreamUtils;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -48,8 +48,8 @@ public abstract class JsonRpcServerBatchTest {
         assertEquals(HttpServletResponse.SC_OK, response.getStatus());
         JsonNode answer = decodeAnswer(toByteArrayOutputStream(response.getContentAsByteArray()));
         assertTrue(answer instanceof ArrayNode);
-        assertEquals("Result1", getFromArrayWithId(answer, 1).get(RESULT).asText());
-        assertEquals("Result2", getFromArrayWithId(answer, 2).get(RESULT).asText());
+        assertEquals("Result1", getFromArrayWithId(answer, 1).get(RESULT).asString());
+        assertEquals("Result2", getFromArrayWithId(answer, 2).get(RESULT).asString());
     }
 
     @Test
@@ -67,8 +67,8 @@ public abstract class JsonRpcServerBatchTest {
         assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response.getStatus());
         JsonNode answer = decodeAnswer(toByteArrayOutputStream(response.getContentAsByteArray()));
         assertTrue(answer instanceof ArrayNode);
-        assertEquals("Error", getFromArrayWithId(answer, 1).get(ERROR).get(DATA).get(ERROR_MESSAGE).asText());
-        assertEquals("Result2", getFromArrayWithId(answer, 2).get(RESULT).asText());
+        assertEquals("Error", getFromArrayWithId(answer, 1).get(ERROR).get(DATA).get(ERROR_MESSAGE).asString());
+        assertEquals("Result2", getFromArrayWithId(answer, 2).get(RESULT).asString());
     }
 
     @Test
@@ -127,8 +127,8 @@ public abstract class JsonRpcServerBatchTest {
         JsonNode answer = decodeAnswer(toByteArrayOutputStream(response.getContentAsByteArray()));
         assertTrue(answer instanceof ArrayNode);
 
-        assertEquals(validResultOne, getFromArrayWithId(answer, 1).get(RESULT).asText());
-        assertEquals(validResultThree, getFromArrayWithId(answer, 3).get(RESULT).asText());
+        assertEquals(validResultOne, getFromArrayWithId(answer, 1).get(RESULT).asString());
+        assertEquals(validResultThree, getFromArrayWithId(answer, 3).get(RESULT).asString());
 
         JsonNode secondResponse = getFromArrayWithId(answer, 2);
         JsonNode responseId = secondResponse.get(ID);
@@ -141,7 +141,7 @@ public abstract class JsonRpcServerBatchTest {
 
         assertEquals(METHOD_PARAMS_INVALID.code, errorCode(error).asInt());
 
-        String errorMessage = error.get(ERROR_MESSAGE).asText();
+        String errorMessage = error.get(ERROR_MESSAGE).asString();
         assertTrue(errorMessage.toLowerCase(Locale.ROOT).contains("index"));
         assertTrue(errorMessage.contains("0"));
     }

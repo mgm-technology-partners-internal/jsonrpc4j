@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +32,8 @@ public class DefaultExceptionResolver implements ExceptionResolver {
 			return createJsonRpcClientException(errorObject);
 		
 		try {
-			String exceptionTypeName = dataObject.get(JsonRpcBasicServer.EXCEPTION_TYPE_NAME).asText();
-			String message = hasNonNullTextualData(dataObject, JsonRpcBasicServer.ERROR_MESSAGE) ? dataObject.get(JsonRpcBasicServer.ERROR_MESSAGE).asText() : null;
+			String exceptionTypeName = dataObject.get(JsonRpcBasicServer.EXCEPTION_TYPE_NAME).asString();
+			String message = hasNonNullTextualData(dataObject, JsonRpcBasicServer.ERROR_MESSAGE) ? dataObject.get(JsonRpcBasicServer.ERROR_MESSAGE).asString() : null;
 			return createThrowable(exceptionTypeName, message);
 		} catch (Exception e) {
 			logger.warn("Unable to create throwable", e);
@@ -50,7 +50,7 @@ public class DefaultExceptionResolver implements ExceptionResolver {
 	 */
 	private JsonRpcClientException createJsonRpcClientException(ObjectNode errorObject) {
 		int code = errorObject.has(JsonRpcBasicServer.ERROR_CODE) ? errorObject.get(JsonRpcBasicServer.ERROR_CODE).asInt() : 0;
-		return new JsonRpcClientException(code, errorObject.get(JsonRpcBasicServer.ERROR_MESSAGE).asText(), errorObject.get(JsonRpcBasicServer.DATA));
+		return new JsonRpcClientException(code, errorObject.get(JsonRpcBasicServer.ERROR_MESSAGE).asString(), errorObject.get(JsonRpcBasicServer.DATA));
 	}
 	
 	/**

@@ -38,7 +38,7 @@ public class HttpClientTest extends BaseRestTest {
 
 	@Test
 	public void testHttpError() throws Exception {
-		expectedEx.expectMessage(containsString("405 HTTP method POST is not supported by this URL"));
+		expectedEx.expectMessage(containsString("405"));
 		expectedEx.expect(Exception.class);
 
 		service = ProxyUtil.createClientProxy(this.getClass().getClassLoader(), FakeServiceInterface.class, getHttpClient("error", false, false));

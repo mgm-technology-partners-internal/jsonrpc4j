@@ -1,11 +1,11 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -321,7 +321,7 @@ public class JsonRpcClient {
 	}
 	
 	private boolean isIdValueNotCorrect(String id, ObjectNode jsonObject) {
-		return !jsonObject.has(ID) || jsonObject.get(ID) == null || !jsonObject.get(ID).asText().equals(id);
+		return !jsonObject.has(ID) || jsonObject.get(ID) == null || !jsonObject.get(ID).asString().equals(id);
 	}
 	
 	protected boolean hasError(ObjectNode jsonObject) {

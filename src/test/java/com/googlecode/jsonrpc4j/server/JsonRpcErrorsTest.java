@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.ErrorResolver;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
 import com.googlecode.jsonrpc4j.JsonRpcError;
@@ -54,11 +54,11 @@ public class JsonRpcErrorsTest {
 		JsonNode error = error(byteArrayOutputStream);
 		assertNotNull(error);
 		assertEquals(1234, errorCode(error).intValue());
-		assertEquals(null, errorMessage(error).textValue());
+		assertEquals(null, errorMessage(error).asString());
 		JsonNode data = errorData(error);
 		assertNotNull(data);
-		assertEquals(null, errorMessage(data).textValue());
-		assertEquals(CustomTestException.class.getName(), exceptionType(data).textValue());
+		assertEquals(null, errorMessage(data).asString());
+		assertEquals(CustomTestException.class.getName(), exceptionType(data).asString());
 	}
 	
 	@Test
@@ -70,7 +70,7 @@ public class JsonRpcErrorsTest {
 		
 		assertNotNull(error);
 		assertEquals(-5678, errorCode(error).intValue());
-		assertEquals("The message", errorMessage(error).textValue());
+		assertEquals("The message", errorMessage(error).asString());
 	}
 	
 	@Test
@@ -82,11 +82,11 @@ public class JsonRpcErrorsTest {
 		
 		assertNotNull(error);
 		assertEquals(1234, errorCode(error).intValue());
-		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(error).textValue());
+		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(error).asString());
 		JsonNode data = errorData(error);
 		assertNotNull(data);
-		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(data).textValue());
-		assertEquals(CustomTestException.class.getName(), exceptionType(data).textValue());
+		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(data).asString());
+		assertEquals(CustomTestException.class.getName(), exceptionType(data).asString());
 	}
 	
 	@SuppressWarnings({"unused", "WeakerAccess"})

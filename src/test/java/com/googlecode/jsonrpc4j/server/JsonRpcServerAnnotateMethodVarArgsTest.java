@@ -1,10 +1,9 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
 import com.googlecode.jsonrpc4j.JsonRpcMethod;
 import com.googlecode.jsonrpc4j.JsonRpcParam;
@@ -15,6 +14,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import tools.jackson.core.JacksonException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -63,7 +63,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 		);
 		JsonNode res = result();
 		ObjectMapper mapper = new ObjectMapper();
-		JsonNode resultNode = mapper.readTree(res.asText());
+		JsonNode resultNode = mapper.readTree(res.asString());
 		// params order saved during call, but order not guaranteed
 		ObjectNode expectedResult = mapper.valueToTree(paramsMap);
 		expectedResult.set("argTwo", mapper.valueToTree(2));
@@ -90,7 +90,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 
 		JsonNode res = result();
 		ObjectMapper mapper = new ObjectMapper();
-		ArrayNode resultNode = (ArrayNode) mapper.readTree(res.asText());
+		ArrayNode resultNode = (ArrayNode) mapper.readTree(res.asString());
 
 		Assert.assertThat(resultNode.get(0).asInt(), is(equalTo(1)));
 		Assert.assertThat(resultNode.get(1).asInt(), is(equalTo(2)));
@@ -138,8 +138,8 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 		};
 
 		ArrayNode resultNode = callMethod(methodName, args);
-		Assert.assertThat(resultNode.get(0).asText(), is(equalTo(strings[0])));
-		Assert.assertThat(resultNode.get(1).asText(), is(equalTo(strings[1])));
+		Assert.assertThat(resultNode.get(0).asString(), is(equalTo(strings[0])));
+		Assert.assertThat(resultNode.get(1).asString(), is(equalTo(strings[1])));
 
 		args = new Object[] {
 			"strings",
@@ -147,7 +147,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 		};
 
 		resultNode = callMethod(methodName, args);
-		Assert.assertThat(resultNode.get(0).asText(), is(equalTo(strings[0])));
+		Assert.assertThat(resultNode.get(0).asString(), is(equalTo(strings[0])));
 	}
 
 	private void testVarargMethodWithPrimitiveParamAnnotation(String methodName) throws Exception {
@@ -261,7 +261,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 
 		JsonNode res = result();
 		ObjectMapper mapper = new ObjectMapper();
-		return (ArrayNode) mapper.readTree(res.asText());
+		return (ArrayNode) mapper.readTree(res.asString());
 	}
 
 	private JsonNode result() throws IOException {
@@ -285,7 +285,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 
 			try {
 				return new ObjectMapper().writeValueAsString(map);
-			} catch (JsonProcessingException e) {
+			} catch (JacksonException e) {
 				Assert.fail(e.getMessage());
 				return null;
 			}
@@ -373,7 +373,7 @@ public class JsonRpcServerAnnotateMethodVarArgsTest {
 		private String writeObjects(Object[] objects) {
 			try {
 				return new ObjectMapper().writeValueAsString(objects);
-			} catch (JsonProcessingException e) {
+			} catch (JacksonException e) {
 				Assert.fail(e.getMessage());
 				return null;
 			}
