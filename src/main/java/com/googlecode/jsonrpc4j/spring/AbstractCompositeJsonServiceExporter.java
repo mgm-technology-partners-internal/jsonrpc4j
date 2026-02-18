@@ -2,8 +2,7 @@ package com.googlecode.jsonrpc4j.spring;
 
 import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -12,9 +11,9 @@ import org.springframework.context.ApplicationContextAware;
 /**
  * Abstract class for exposing composite services via spring.
  */
+@Slf4j
 @SuppressWarnings("unused")
 abstract class AbstractCompositeJsonServiceExporter implements InitializingBean, ApplicationContextAware {
-	private static final Logger logger = LoggerFactory.getLogger(AbstractCompositeJsonServiceExporter.class);
 
 	private ObjectMapper objectMapper;
 	private ApplicationContext applicationContext;
@@ -53,7 +52,7 @@ abstract class AbstractCompositeJsonServiceExporter implements InitializingBean,
 			try {
 				objectMapper = BeanFactoryUtils.beanOfTypeIncludingAncestors(applicationContext, ObjectMapper.class);
 			} catch (Exception e) {
-				logger.error("Could not load ObjectMapper from ApplicationContext", e);
+				log.error("Could not load ObjectMapper from ApplicationContext", e);
 			}
 		}
 		if (objectMapper == null) {

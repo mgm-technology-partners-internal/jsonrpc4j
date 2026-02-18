@@ -1,8 +1,7 @@
 package com.googlecode.jsonrpc4j;
 
 import com.googlecode.jsonrpc4j.spring.rest.JsonRpcRestClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,10 +19,10 @@ import java.util.Set;
 /**
  * Utilities for create client proxies.
  */
+@Slf4j
 @SuppressWarnings({"unused", "WeakerAccess"})
 public abstract class ProxyUtil {
 	
-	private static final Logger logger = LoggerFactory.getLogger(ProxyUtil.class);
 	
 	/**
 	 * Creates a composite service using all of the given
@@ -87,7 +86,7 @@ public abstract class ProxyUtil {
 			}
 			for (Object o : services) {
 				if (clazz.isInstance(o)) {
-					logger.debug("Using {} for {}", o.getClass().getName(), clazz.getName());
+					log.debug("Using {} for {}", o.getClass().getName(), clazz.getName());
 					serviceMap.put(clazz, o);
 					break;
 				}

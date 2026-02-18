@@ -1,8 +1,7 @@
 package com.googlecode.jsonrpc4j;
 
 import tools.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -15,8 +14,8 @@ import static com.googlecode.jsonrpc4j.Util.hasNonNullTextualData;
  * that was thrown by the server. This always returns a {@link Throwable}.
  * The exception class must be present on the classpath.
  */
+@Slf4j
 public class DefaultExceptionResolver implements ExceptionResolver {
-	private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionResolver.class);
 	public static final DefaultExceptionResolver INSTANCE = new DefaultExceptionResolver();
 
 	/**
@@ -36,7 +35,7 @@ public class DefaultExceptionResolver implements ExceptionResolver {
 			String message = hasNonNullTextualData(dataObject, JsonRpcBasicServer.ERROR_MESSAGE) ? dataObject.get(JsonRpcBasicServer.ERROR_MESSAGE).asString() : null;
 			return createThrowable(exceptionTypeName, message);
 		} catch (Exception e) {
-			logger.warn("Unable to create throwable", e);
+			log.warn("Unable to create throwable", e);
 			return createJsonRpcClientException(errorObject);
 		}
 	}
@@ -75,15 +74,15 @@ public class DefaultExceptionResolver implements ExceptionResolver {
 		if (message != null && messageCtr != null) {
 			return messageCtr.newInstance(message);
 		} else if (message != null && defaultCtr != null) {
-			logger.warn("Unable to invoke message constructor for {}, fallback to default", clazz.getName());
+			log.warn("Unable to invoke message constructor for {}, fallback to default", clazz.getName());
 			return defaultCtr.newInstance();
 		} else if (message == null && defaultCtr != null) {
 			return defaultCtr.newInstance();
 		} else if (message == null && messageCtr != null) {
-			logger.warn("Passing null message to message constructor for {}", clazz.getName());
+			log.warn("Passing null message to message constructor for {}", clazz.getName());
 			return messageCtr.newInstance((String) null);
 		} else {
-			logger.error("Unable to find message or default constructor for {} have {}", clazz.getName(), clazz.getDeclaredConstructors());
+			log.error("Unable to find message or default constructor for {} have {}", clazz.getName(), clazz.getDeclaredConstructors());
 			return null;
 		}
 	}
@@ -102,15 +101,15 @@ public class DefaultExceptionResolver implements ExceptionResolver {
 		try {
 			clazz = Class.forName(typeName);
 			if (!Throwable.class.isAssignableFrom(clazz)) {
-				logger.warn("Type does not inherit from Throwable {}", clazz.getName());
+				log.warn("Type does not inherit from Throwable {}", clazz.getName());
 			} else {
 				return clazz.asSubclass(Throwable.class);
 			}
 		} catch(ClassNotFoundException e) {
-			logger.warn("Unable to load Throwable class {}", typeName);
+			log.warn("Unable to load Throwable class {}", typeName);
 			throw e;
 		} catch(Exception e) {
-			logger.warn("Unable to load Throwable class {}", typeName);
+			log.warn("Unable to load Throwable class {}", typeName);
 		}
 		return null;
 	}

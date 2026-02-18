@@ -1,7 +1,6 @@
 package com.googlecode.jsonrpc4j;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLException;
@@ -26,9 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * A multi-threaded streaming server that uses JSON-RPC over sockets.
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
+@Slf4j
 public class StreamServer {
 	
-	private static final Logger logger = LoggerFactory.getLogger(StreamServer.class);
 	
 	private static final long SERVER_SOCKET_SO_TIMEOUT = 5000;
 	
@@ -90,7 +89,7 @@ public class StreamServer {
 		if (tryToStart()) {
 			throw new IllegalStateException("The StreamServer is already started");
 		}
-		logger.debug("StreamServer starting {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
+		log.debug("StreamServer starting {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
 		keepRunning.set(true);
 		executor.submit(new Server());
 	}
@@ -116,7 +115,7 @@ public class StreamServer {
 			isStarted.set(false);
 			stopServer();
 		} catch (InterruptedException e) {
-			logger.error("InterruptedException while waiting for termination", e);
+			log.error("InterruptedException while waiting for termination", e);
 			throw e;
 		}
 	}
@@ -133,7 +132,7 @@ public class StreamServer {
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
-			logger.debug("Failed to close socket", e);
+			log.debug("Failed to close socket", e);
 		}
 	}
 	
@@ -153,7 +152,7 @@ public class StreamServer {
 			try {
 				c.close();
 			} catch (Throwable t) {
-				logger.warn("Error closing, ignoring", t);
+				log.warn("Error closing, ignoring", t);
 			}
 		}
 	}
@@ -212,21 +211,21 @@ public class StreamServer {
 				try {
 					serverSocket.setSoTimeout((int) SERVER_SOCKET_SO_TIMEOUT);
 					clientSocket = serverSocket.accept();
-					logger.debug("Client connected: {}:{}", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+					log.debug("Client connected: {}:{}", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
 					// spawn a new Server for the next connection and break out of the server loop
 					executor.submit(new Server());
 					break;
 				} catch (SocketTimeoutException e) {
 					handleSocketTimeoutException(e);
 				} catch (SSLException sslException) {
-					logger.error("SSLException while listening for clients, terminating", sslException);
+					log.error("SSLException while listening for clients, terminating", sslException);
 					break;
 				} catch (IOException ioe) {
 					// this could be because the ServerSocket was closed
 					if (SocketException.class.isInstance(ioe) && !keepRunning.get()) {
 						break;
 					}
-					logger.error("Exception while listening for clients", ioe);
+					log.error("Exception while listening for clients", ioe);
 				}
 			}
 			if (clientSocket != null) {
@@ -236,7 +235,7 @@ public class StreamServer {
 					input = new BufferedInputStream(clientSocket.getInputStream());
 					output = clientSocket.getOutputStream();
 				} catch (IOException e) {
-					logger.error("Client socket failed", e);
+					log.error("Client socket failed", e);
 					return;
 				}
 				
@@ -247,15 +246,15 @@ public class StreamServer {
 							jsonRpcServer.handleRequest(input, output);
 						} catch (Throwable t) {
 							if (StreamEndedException.class.isInstance(t)) {
-								logger.debug("Client disconnected: {}:{}", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+								log.debug("Client disconnected: {}:{}", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
 								break;
 							}
 							errors++;
 							lastException = t;
 							if (errors < maxClientErrors) {
-								logger.error("Exception while handling request", t);
+								log.error("Exception while handling request", t);
 							} else {
-								logger.error("Closing client connection due to repeated errors", t);
+								log.error("Closing client connection due to repeated errors", t);
 								break;
 							}
 						}

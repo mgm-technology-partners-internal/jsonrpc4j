@@ -1,8 +1,7 @@
 package com.googlecode.jsonrpc4j;
 
 import tools.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
@@ -37,10 +36,10 @@ import java.util.Map;
  * </pre>
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
+@Slf4j
 public class JsonRpcMultiServer extends JsonRpcServer {
 
 	public static final char DEFAULT_SEPARATOR = '.';
-	private static final Logger logger = LoggerFactory.getLogger(JsonRpcMultiServer.class);
 
 	private final Map<String, Object> handlerMap;
 	private final Map<String, Class<?>> interfaceMap;
@@ -48,7 +47,7 @@ public class JsonRpcMultiServer extends JsonRpcServer {
 
 	public JsonRpcMultiServer() {
 		this(new ObjectMapper());
-		logger.debug("created empty multi server");
+		log.debug("created empty multi server");
 	}
 
 	public JsonRpcMultiServer(ObjectMapper mapper) {
@@ -62,7 +61,7 @@ public class JsonRpcMultiServer extends JsonRpcServer {
 	}
 
 	public JsonRpcMultiServer addService(String name, Object handler, Class<?> remoteInterface) {
-		logger.debug("add service interface {} with handler {}", remoteInterface, handler);
+		log.debug("add service interface {} with handler {}", remoteInterface, handler);
 		handlerMap.put(name, handler);
 		if (remoteInterface != null) {
 			interfaceMap.put(name, remoteInterface);
@@ -143,7 +142,7 @@ public class JsonRpcMultiServer extends JsonRpcServer {
 	protected Object getHandler(String serviceName) {
 		Object handler = handlerMap.get(serviceName);
 		if (handler == null) {
-			logger.error("Service '{}' is not registered in this multi-server", serviceName);
+			log.error("Service '{}' is not registered in this multi-server", serviceName);
 			throw new RuntimeException("Service '" + serviceName + "' does not exist");
 		}
 		return handler;

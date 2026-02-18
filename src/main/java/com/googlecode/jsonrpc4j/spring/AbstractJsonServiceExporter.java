@@ -3,8 +3,7 @@ package com.googlecode.jsonrpc4j.spring;
 import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -18,9 +17,9 @@ import java.util.concurrent.ExecutorService;
 /**
  * Exports user defined services using JSON-RPC protocol
  */
+@Slf4j
 @SuppressWarnings("unused")
 abstract class AbstractJsonServiceExporter implements InitializingBean, ApplicationContextAware {
-	private static final Logger logger = LoggerFactory.getLogger(AbstractJsonServiceExporter.class);
 
 	private ObjectMapper objectMapper;
 	private JsonRpcServer jsonRpcServer;
@@ -53,7 +52,7 @@ abstract class AbstractJsonServiceExporter implements InitializingBean, Applicat
 			try {
 				objectMapper = BeanFactoryUtils.beanOfTypeIncludingAncestors(applicationContext, ObjectMapper.class);
 			} catch (Exception e) {
-				logger.debug("Failed to obtain objectMapper from application context", e);
+				log.debug("Failed to obtain objectMapper from application context", e);
 			}
 		}
 		if (objectMapper == null) {

@@ -2,8 +2,7 @@ package com.googlecode.jsonrpc4j.spring;
 
 import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -40,9 +39,9 @@ import static org.springframework.util.ClassUtils.getAllInterfacesForClass;
  * for details.</p>
  */
 @SuppressWarnings("unused")
+@Slf4j
 public class AutoJsonRpcServiceImplExporter implements BeanFactoryPostProcessor {
 
-	private static final Logger logger = LoggerFactory.getLogger(AutoJsonRpcServiceImplExporter.class);
 
 	private static final String PATH_PREFIX = "/";
 
@@ -92,7 +91,7 @@ public class AutoJsonRpcServiceImplExporter implements BeanFactoryPostProcessor 
 						throw new RuntimeException("the path [" + path + "] for the bean [" + beanName + "] is not valid");
 					}
 					
-					logger.info("exporting bean [{}] ---> [{}]", beanName, path);
+					log.info("exporting bean [{}] ---> [{}]", beanName, path);
 					if (isNotDuplicateService(serviceBeanNames, beanName, path)) {
                         serviceBeanNames.put(path, beanName);
                     }
@@ -120,7 +119,7 @@ public class AutoJsonRpcServiceImplExporter implements BeanFactoryPostProcessor 
 	private static boolean isNotDuplicateService(Map<String, String> serviceBeanNames, String beanName, String pathValue) {
 		if (serviceBeanNames.containsKey(pathValue)) {
 			String otherBeanName = serviceBeanNames.get(pathValue);
-			logger.debug("Duplicate JSON-RPC path specification: found {} on both [{}] and [{}].", pathValue, beanName, otherBeanName);
+			log.debug("Duplicate JSON-RPC path specification: found {} on both [{}] and [{}].", pathValue, beanName, otherBeanName);
 			return false;
 		}
 		return true;
@@ -164,7 +163,7 @@ public class AutoJsonRpcServiceImplExporter implements BeanFactoryPostProcessor 
 		for (Class<?> currentInterface : getBeanInterfaces(serviceBeanDefinition, defaultListableBeanFactory.getBeanClassLoader())) {
 			if (currentInterface.isAnnotationPresent(JsonRpcService.class)) {
 				String serviceInterface = currentInterface.getName();
-				logger.debug("Registering interface '{}' for JSON-RPC bean [{}].", serviceInterface, serviceBeanName);
+				log.debug("Registering interface '{}' for JSON-RPC bean [{}].", serviceInterface, serviceBeanName);
 				builder.addPropertyValue("serviceInterface", serviceInterface);
 				break;
 			}

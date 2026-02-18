@@ -2,8 +2,7 @@ package com.googlecode.jsonrpc4j.spring;
 
 import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -30,9 +29,9 @@ import static org.springframework.util.ResourceUtils.CLASSPATH_URL_PREFIX;
  * Auto-creates proxies for service interfaces annotated with {@link JsonRpcService}.
  */
 @SuppressWarnings("unused")
+@Slf4j
 public class AutoJsonRpcClientProxyCreator implements BeanFactoryPostProcessor, ApplicationContextAware, EnvironmentAware {
 	
-	private static final Logger logger = LoggerFactory.getLogger(AutoJsonRpcClientProxyCreator.class);
 	private ApplicationContext applicationContext;
 	private Environment environment;
 	private String scanPackage;
@@ -45,7 +44,7 @@ public class AutoJsonRpcClientProxyCreator implements BeanFactoryPostProcessor, 
 		SimpleMetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory(applicationContext);
 		DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) beanFactory;
 		String resolvedPath = resolvePackageToScan();
-		logger.debug("Scanning '{}' for JSON-RPC service interfaces.", resolvedPath);
+		log.debug("Scanning '{}' for JSON-RPC service interfaces.", resolvedPath);
 		try {
 			for (Resource resource : applicationContext.getResources(resolvedPath)) {
 				if (resource.isReadable()) {
@@ -57,7 +56,7 @@ public class AutoJsonRpcClientProxyCreator implements BeanFactoryPostProcessor, 
 						String className = classMetadata.getClassName();
 						String path = (String) annotationMetadata.getAnnotationAttributes(jsonRpcPathAnnotation).get("value");
 						path = this.environment.resolvePlaceholders(path);
-						logger.debug("Found JSON-RPC service to proxy [{}] on path '{}'.", className, path);
+						log.debug("Found JSON-RPC service to proxy [{}] on path '{}'.", className, path);
 						registerJsonProxyBean(defaultListableBeanFactory, className, path);
 					}
 				}

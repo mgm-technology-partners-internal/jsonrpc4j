@@ -111,6 +111,11 @@ dependencies {
 
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+    testCompileOnly 'org.projectlombok:lombok:1.18.36'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
+
     // Jakarta Servlet API for servlet support
     servletSupportImplementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
 

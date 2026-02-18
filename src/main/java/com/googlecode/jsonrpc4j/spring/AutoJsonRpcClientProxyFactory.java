@@ -1,8 +1,7 @@
 package com.googlecode.jsonrpc4j.spring;
 
 import com.googlecode.jsonrpc4j.JsonRpcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -18,9 +17,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 
+@Slf4j
 public class AutoJsonRpcClientProxyFactory implements ApplicationContextAware, InstantiationAwareBeanPostProcessor {
 
-    private static final Logger logger = LoggerFactory.getLogger(AutoJsonRpcClientProxyFactory.class);
 
     private ApplicationContext applicationContext;
 
@@ -50,7 +49,7 @@ public class AutoJsonRpcClientProxyFactory implements ApplicationContextAware, I
                 // set bean
                 field.setAccessible(true);
                 field.set(bean, proxy);
-                logger.debug("------------- set bean {} field {} to proxy {}", beanName, field.getName(), proxy.getClass().getName());
+                log.debug("------------- set bean {} field {} to proxy {}", beanName, field.getName(), proxy.getClass().getName());
             }
         });
         return true;
@@ -75,7 +74,7 @@ public class AutoJsonRpcClientProxyFactory implements ApplicationContextAware, I
         if (annotationMetadata.isAnnotated(jsonRpcPathAnnotation)) {
             String className = classMetadata.getClassName();
             String path = (String) annotationMetadata.getAnnotationAttributes(jsonRpcPathAnnotation).get("value");
-            logger.debug("Found JSON-RPC service to proxy [{}] on path '{}'.", className, path);
+            log.debug("Found JSON-RPC service to proxy [{}] on path '{}'.", className, path);
             return appendBasePath(path);
         } else {
             throw new RuntimeException("JsonRpcService must be interface.");
