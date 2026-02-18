@@ -1,7 +1,8 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DatabindException;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -139,12 +140,32 @@ public class JsonRpcHttpClient extends JsonRpcClient implements IJsonRpcClient {
 			}
 			
 			final boolean useGzip = useGzip(connection);
+			int responseCode = connection.getResponseCode();
+			String responseMessage = connection.getResponseMessage();
 			// read and return value
 			try {
-				try (InputStream answer = getStream(connection.getInputStream(), useGzip)) {
-					return super.readResponse(returnType, answer);
+				InputStream responseStream;
+				if (responseCode == HttpURLConnection.HTTP_OK) {
+					responseStream = connection.getInputStream();
+					try (InputStream answer = getStream(responseStream, useGzip)) {
+						return super.readResponse(returnType, answer);
+					}
+				} else {
+					// For non-200 responses, try to read the error stream
+					// It might contain a valid JSON-RPC error response
+					responseStream = connection.getErrorStream();
+					if (responseStream == null) {
+						throw new HttpException(responseCode + " " + responseMessage, null);
+					}
+					try (InputStream answer = getStream(responseStream, useGzip)) {
+						return super.readResponse(returnType, answer);
+					} catch (JacksonException je) {
+						// Error stream doesn't contain valid JSON-RPC response (e.g., HTML error page)
+						// Throw HTTP exception with status code
+						throw new HttpException(responseCode + " " + responseMessage, je);
+					}
 				}
-			} catch (JsonMappingException e) {
+			} catch (DatabindException e) {
 				// JsonMappingException inherits from IOException
 				throw e;
 			} catch (IOException e) {

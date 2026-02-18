@@ -1,64 +1,33 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.config.ConnectionConfig;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.impl.DefaultConnectionReuseStrategy;
-import org.apache.http.impl.nio.DefaultHttpClientIODispatch;
-import org.apache.http.impl.nio.pool.BasicNIOConnFactory;
-import org.apache.http.impl.nio.pool.BasicNIOConnPool;
-import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
-import org.apache.http.message.BasicHttpEntityEnclosingRequest;
-import org.apache.http.nio.protocol.BasicAsyncRequestProducer;
-import org.apache.http.nio.protocol.BasicAsyncResponseConsumer;
-import org.apache.http.nio.protocol.HttpAsyncRequestExecutor;
-import org.apache.http.nio.protocol.HttpAsyncRequester;
-import org.apache.http.nio.reactor.ConnectingIOReactor;
-import org.apache.http.nio.reactor.IOEventDispatch;
-import org.apache.http.nio.reactor.IOReactorException;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpProcessor;
-import org.apache.http.protocol.ImmutableHttpProcessor;
-import org.apache.http.protocol.RequestConnControl;
-import org.apache.http.protocol.RequestContent;
-import org.apache.http.protocol.RequestExpectContinue;
-import org.apache.http.protocol.RequestTargetHost;
-import org.apache.http.protocol.RequestUserAgent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLContext;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+
+import javax.net.ssl.SSLContext;
+
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import static com.googlecode.jsonrpc4j.JsonRpcBasicServer.ERROR;
 import static com.googlecode.jsonrpc4j.JsonRpcBasicServer.ID;
@@ -68,61 +37,42 @@ import static com.googlecode.jsonrpc4j.JsonRpcBasicServer.PARAMS;
 import static com.googlecode.jsonrpc4j.JsonRpcBasicServer.RESULT;
 
 /**
- * Implements an asynchronous JSON-RPC 2.0 HTTP client. This class has a
- * dependency on Apache Commons Codec, Apache
+ * Implements an asynchronous JSON-RPC 2.0 HTTP client using Java 11+ HttpClient.
  * <p>
- * Because this implementation uses an HTTP request pool, timeouts are
- * controlled at a global level, rather than per-request.
+ * This implementation replaces the previous Apache HttpComponents-based async client
+ * with the standard Java HttpClient which provides native async support.
  * <p>
- * The following JVM system properties control the behavior of the pool:
+ * The following JVM system properties control the behavior:
  * <ul>
- * <li>com.googlecode.jsonrpc4j.async.socket.timeout - overall socket idle
- * (keep-alive) timeout in milliseconds, default is 30 seconds</li>
- * <li>com.googlecode.jsonrpc4j.async.connect.timeout - socket connect timeout
- * in milliseconds, default is 30 seconds</li>
- * <li>com.googlecode.jsonrpc4j.async.socket.buffer - socket buffer size in
- * bytes, default is 8Kb (8192 bytes)</li>
- * <li>com.googlecode.jsonrpc4j.async.tcp.nodelay - true to use TCP_NODELAY,
- * false to disable, default is true
- * <li>com.googlecode.jsonrpc4j.async.max.inflight.route - maximum number of
- * in-flight requests per route (unique URL, minus query string), default is 500
- * </li>
- * <li>com.googlecode.jsonrpc4j.async.max.inflight.total - maximum number of
- * total in-flight requests (across all providers), default is 500</li>
- * <li>com.googlecode.jsonrpc4j.async.reactor.threads - number of asynchronous
- * IO reactor threads, default is 2 (more than sufficient for most clients)</li>
+ * <li>com.googlecode.jsonrpc4j.async.connect.timeout - connection timeout in milliseconds, default is 30 seconds</li>
+ * <li>com.googlecode.jsonrpc4j.async.request.timeout - request timeout in milliseconds, default is 30 seconds</li>
  * </ul>
  *
- * @author Brett Wooldridge
+ * @author Brett Wooldridge (original)
+ * @author jsonrpc4j contributors (Java 11+ HttpClient migration)
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
+@Slf4j
 public class JsonRpcHttpAsyncClient {
-	
-	private static final Logger logger = LoggerFactory.getLogger(JsonRpcHttpAsyncClient.class);
-	
-	private static final AtomicBoolean initialized = new AtomicBoolean();
+
 	private static final AtomicLong nextId = new AtomicLong();
-	private static HttpAsyncRequester requester;
-	private static BasicNIOConnPool pool;
-	private static SSLContext sslContext;
+	private static volatile SSLContext sslContext;
+
 	private final ExceptionResolver exceptionResolver;
 	private final Map<String, String> headers = new HashMap<>();
 	private final ObjectMapper mapper;
 	private final URL serviceUrl;
-	
-	{
-		initialize();
-	}
-	
+	private final HttpClient httpClient;
+
 	/**
 	 * Creates the {@link JsonRpcHttpAsyncClient} bound to the given {@code serviceUrl}.
 	 *
 	 * @param serviceUrl the service end-point URL
 	 */
 	public JsonRpcHttpAsyncClient(URL serviceUrl) {
-		this(new ObjectMapper(), serviceUrl, new HashMap<String, String>());
+		this(new ObjectMapper(), serviceUrl, new HashMap<>());
 	}
-	
+
 	/**
 	 * Creates the {@link JsonRpcHttpAsyncClient} using the specified {@code ObjectMapper} and bound to the given
 	 * {@code serviceUrl}. The headers provided in the {@code headers} map are added to every request
@@ -143,10 +93,10 @@ public class JsonRpcHttpAsyncClient {
 	 * added to every request made to the {@code serviceUrl}.
 	 * The {@link ExceptionResolver} can not be null.
 	 *
-	 * @param mapper     the {@link ObjectMapper} to use for json&lt;-&gt;java conversion
+	 * @param mapper            the {@link ObjectMapper} to use for json&lt;-&gt;java conversion
 	 * @param exceptionResolver the {@link ExceptionResolver} translating remote exceptions.
-	 * @param serviceUrl the service end-point URL
-	 * @param headers    the headers
+	 * @param serviceUrl        the service end-point URL
+	 * @param headers           the headers
 	 */
 	public JsonRpcHttpAsyncClient(ObjectMapper mapper, ExceptionResolver exceptionResolver, URL serviceUrl, Map<String, String> headers) {
 		this.mapper = mapper;
@@ -154,9 +104,11 @@ public class JsonRpcHttpAsyncClient {
 		this.headers.putAll(headers);
 		this.exceptionResolver = exceptionResolver;
 
-		if(this.exceptionResolver == null) {
+		if (this.exceptionResolver == null) {
 			throw new IllegalArgumentException("ExceptionResolver can not be null");
 		}
+
+		this.httpClient = createHttpClient();
 	}
 
 	/**
@@ -170,18 +122,33 @@ public class JsonRpcHttpAsyncClient {
 	public JsonRpcHttpAsyncClient(URL serviceUrl, Map<String, String> headers) {
 		this(new ObjectMapper(), serviceUrl, headers);
 	}
-	
+
 	/**
-	 * Set the SSLContext to be used to create SSL connections. This method most
-	 * be called before the first {@code JsonRpcHttpAsyncClient} is constructed,
-	 * otherwise it has no effect.
+	 * Set the SSLContext to be used to create SSL connections.
 	 *
 	 * @param sslContext the {@code SSLContext to use}
 	 */
 	public static void setSSLContext(SSLContext sslContext) {
 		JsonRpcHttpAsyncClient.sslContext = sslContext;
 	}
-	
+
+	/**
+	 * Creates the HttpClient instance with configured timeouts and SSL context.
+	 */
+	private HttpClient createHttpClient() {
+		int connectTimeout = Integer.getInteger("com.googlecode.jsonrpc4j.async.connect.timeout", 30000);
+
+		HttpClient.Builder builder = HttpClient.newBuilder()
+				.version(HttpClient.Version.HTTP_1_1)
+				.connectTimeout(Duration.ofMillis(connectTimeout));
+
+		if (sslContext != null) {
+			builder.sslContext(sslContext);
+		}
+
+		return builder.build();
+	}
+
 	/**
 	 * Invokes the given method with the given arguments and returns
 	 * immediately. The {@code Future} object that is returned can be used to
@@ -192,9 +159,24 @@ public class JsonRpcHttpAsyncClient {
 	 * @return the response {@code Future<T>}
 	 */
 	public Future<Object> invoke(String methodName, Object argument) {
-		return invoke(methodName, argument, Object.class, new HashMap<String, String>());
+		return invoke(methodName, argument, Object.class, new HashMap<>());
 	}
-	
+
+	/**
+	 * Invokes the given method with the given arguments and returns
+	 * immediately. The {@code Future<T>} object that is returned can be used to
+	 * retrieve the result.
+	 *
+	 * @param methodName the name of the method to invoke
+	 * @param argument   the arguments to the method
+	 * @param returnType the return type
+	 * @param <T>        the return type
+	 * @return the response {@code Future<T>}
+	 */
+	public <T> Future<T> invoke(String methodName, Object argument, Class<T> returnType) {
+		return invoke(methodName, argument, returnType, new HashMap<>());
+	}
+
 	/**
 	 * Invokes the given method with the given arguments and returns
 	 * immediately. The {@code extraHeaders} are added to the request. The
@@ -209,122 +191,9 @@ public class JsonRpcHttpAsyncClient {
 	 * @return the response {@code Future<T>}
 	 */
 	private <T> Future<T> invoke(String methodName, Object argument, Class<T> returnType, Map<String, String> extraHeaders) {
-		return doInvoke(methodName, argument, returnType, extraHeaders, new JsonRpcFuture<T>());
+		return doInvoke(methodName, argument, returnType, extraHeaders);
 	}
-	
-	/**
-	 * Invokes the given method with the given arguments and invokes the
-	 * {@code JsonRpcCallback} with the result cast to the given
-	 * {@code returnType}, or null if void. The {@code extraHeaders} are added
-	 * to the request.
-	 *
-	 * @param methodName   the name of the method to invoke
-	 * @param argument     the arguments to the method
-	 * @param extraHeaders extra headers to add to the request
-	 * @param returnType   the return type
-	 * @param callback     the {@code JsonRpcCallback}
-	 */
-	@SuppressWarnings("unchecked")
-	private <T> Future<T> doInvoke(String methodName, Object argument, Class<T> returnType, Map<String, String> extraHeaders, JsonRpcCallback<T> callback) {
-		
-		String path = serviceUrl.getPath() + (serviceUrl.getQuery() != null ? "?" + serviceUrl.getQuery() : "");
-		int port = serviceUrl.getPort() != -1 ? serviceUrl.getPort() : serviceUrl.getDefaultPort();
-		HttpRequest request = new BasicHttpEntityEnclosingRequest("POST", path);
-		
-		addHeaders(request, headers);
-		addHeaders(request, extraHeaders);
-		
-		try {
-			writeRequest(methodName, argument, request);
-		} catch (IOException e) {
-			callback.onError(e);
-		}
-		
-		HttpHost target = new HttpHost(serviceUrl.getHost(), port, serviceUrl.getProtocol());
-		BasicAsyncRequestProducer asyncRequestProducer = new BasicAsyncRequestProducer(target, request);
-		BasicAsyncResponseConsumer asyncResponseConsumer = new BasicAsyncResponseConsumer();
-		
-		RequestAsyncFuture<T> futureCallback = new RequestAsyncFuture<>(returnType, callback);
-		
-		BasicHttpContext httpContext = new BasicHttpContext();
-		requester.execute(asyncRequestProducer, asyncResponseConsumer, pool, httpContext, futureCallback);
-		
-		return (callback instanceof JsonRpcFuture ? (Future<T>) callback : null);
-	}
-	
-	/**
-	 * Set the request headers.
-	 *
-	 * @param request the request object
-	 * @param headers to be used
-	 */
-	private void addHeaders(HttpRequest request, Map<String, String> headers) {
-		for (Map.Entry<String, String> key : headers.entrySet()) {
-			request.addHeader(key.getKey(), key.getValue());
-		}
-	}
-	
-	/**
-	 * Writes a request.
-	 *
-	 * @param methodName  the method name
-	 * @param arguments   the arguments
-	 * @param httpRequest the stream on error
-	 */
-	private void writeRequest(String methodName, Object arguments, HttpRequest httpRequest) throws IOException {
-		
-		ObjectNode request = mapper.createObjectNode();
-		request.put(ID, nextId.getAndIncrement());
-		request.put(JSONRPC, JsonRpcBasicServer.VERSION);
-		request.put(METHOD, methodName);
-		
-		if (arguments != null && arguments.getClass().isArray()) {
-			Object[] args = Object[].class.cast(arguments);
-			if (args.length > 0) {
-				request.set(PARAMS, mapper.valueToTree(Object[].class.cast(arguments)));
-			}
-		} else if (arguments != null && Collection.class.isInstance(arguments)) {
-			if (!Collection.class.cast(arguments).isEmpty()) {
-				request.set(PARAMS, mapper.valueToTree(arguments));
-			}
-		} else if (arguments != null && Map.class.isInstance(arguments)) {
-			if (!Map.class.cast(arguments).isEmpty()) {
-				request.set(PARAMS, mapper.valueToTree(arguments));
-			}
-		} else if (arguments != null) {
-			request.set(PARAMS, mapper.valueToTree(arguments));
-		}
-		
-		logger.debug("JSON-RPC Request: {}", request);
-		
-		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(512);
-		mapper.writeValue(byteArrayOutputStream, request);
-		HttpEntityEnclosingRequest entityRequest = (HttpEntityEnclosingRequest) httpRequest;
-		
-		HttpEntity entity;
-		if (entityRequest.getFirstHeader("Content-Type") == null) {
-			entity = new ByteArrayEntity(byteArrayOutputStream.toByteArray(), ContentType.APPLICATION_JSON);
-		} else {
-			entity = new ByteArrayEntity(byteArrayOutputStream.toByteArray());
-		}
-		entityRequest.setEntity(entity);
-	}
-	
-	/**
-	 * Invokes the given method with the given arguments and returns
-	 * immediately. The {@code Future<T>} object that is returned can be used to
-	 * retrieve the result.
-	 *
-	 * @param methodName the name of the method to invoke
-	 * @param argument   the arguments to the method
-	 * @param returnType the return type
-	 * @param <T>        the return type
-	 * @return the response {@code Future<T>}
-	 */
-	public <T> Future<T> invoke(String methodName, Object argument, Class<T> returnType) {
-		return invoke(methodName, argument, returnType, new HashMap<String, String>());
-	}
-	
+
 	/**
 	 * Invokes the given method with the given arguments and invokes the
 	 * {@code JsonRpcCallback} with the result.
@@ -334,25 +203,9 @@ public class JsonRpcHttpAsyncClient {
 	 * @param callback   the {@code JsonRpcCallback}
 	 */
 	public void invoke(String methodName, Object argument, JsonRpcCallback<Object> callback) {
-		invoke(methodName, argument, Object.class, new HashMap<String, String>(), callback);
+		invoke(methodName, argument, Object.class, callback);
 	}
-	
-	/**
-	 * Invokes the given method with the given arguments and invokes the
-	 * {@code JsonRpcCallback} with the result cast to the given
-	 * {@code returnType}, or null if void. The {@code extraHeaders} are added
-	 * to the request.
-	 *
-	 * @param methodName   the name of the method to invoke
-	 * @param argument     the arguments to the method
-	 * @param returnType   the return type
-	 * @param extraHeaders extra headers to add to the request
-	 * @param callback     the {@code JsonRpcCallback}
-	 */
-	private <T> void invoke(String methodName, Object argument, Class<T> returnType, Map<String, String> extraHeaders, JsonRpcCallback<T> callback) {
-		doInvoke(methodName, argument, returnType, extraHeaders, callback);
-	}
-	
+
 	/**
 	 * Invokes the given method with the given arguments and invokes the
 	 * {@code JsonRpcCallback} with the result cast to the given
@@ -365,12 +218,176 @@ public class JsonRpcHttpAsyncClient {
 	 * @param callback   the {@code JsonRpcCallback}
 	 */
 	public <T> void invoke(String methodName, Object argument, Class<T> returnType, JsonRpcCallback<T> callback) {
-		invoke(methodName, argument, returnType, new HashMap<String, String>(), callback);
+		doInvokeWithCallback(methodName, argument, returnType, new HashMap<>(), callback);
 	}
-	
+
 	/**
-	 * Reads a JSON-RPC response from the server. This blocks until a response
-	 * is received.
+	 * Performs the actual invocation and returns a Future.
+	 */
+	@SuppressWarnings("unchecked")
+	private <T> Future<T> doInvoke(String methodName, Object argument, Class<T> returnType, Map<String, String> extraHeaders) {
+		try {
+			byte[] requestBody = createRequestBody(methodName, argument);
+			HttpRequest request = buildHttpRequest(requestBody, extraHeaders);
+
+			int requestTimeout = Integer.getInteger("com.googlecode.jsonrpc4j.async.request.timeout", 30000);
+
+			CompletableFuture<T> future = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+					.orTimeout(requestTimeout, TimeUnit.MILLISECONDS)
+					.thenApply(response -> {
+						try {
+							return handleResponse(response, returnType);
+						} catch (Throwable t) {
+							throw new RuntimeException(t);
+						}
+					});
+
+			return new JsonRpcFuture<>(future);
+		} catch (IOException e) {
+			CompletableFuture<T> failedFuture = new CompletableFuture<>();
+			failedFuture.completeExceptionally(e);
+			return new JsonRpcFuture<>(failedFuture);
+		}
+	}
+
+	/**
+	 * Performs the actual invocation with a callback.
+	 */
+	private <T> void doInvokeWithCallback(String methodName, Object argument, Class<T> returnType,
+										  Map<String, String> extraHeaders, JsonRpcCallback<T> callback) {
+		try {
+			byte[] requestBody = createRequestBody(methodName, argument);
+			HttpRequest request = buildHttpRequest(requestBody, extraHeaders);
+
+			int requestTimeout = Integer.getInteger("com.googlecode.jsonrpc4j.async.request.timeout", 30000);
+
+			httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+					.orTimeout(requestTimeout, TimeUnit.MILLISECONDS)
+					.whenComplete((response, throwable) -> {
+						if (throwable != null) {
+							callback.onError(throwable);
+						} else {
+							try {
+								T result = handleResponse(response, returnType);
+								callback.onComplete(result);
+							} catch (Throwable t) {
+								callback.onError(t);
+							}
+						}
+					});
+		} catch (IOException e) {
+			callback.onError(e);
+		}
+	}
+
+	/**
+	 * Creates the JSON-RPC request body.
+	 */
+	private byte[] createRequestBody(String methodName, Object arguments) throws IOException {
+		ObjectNode request = mapper.createObjectNode();
+		request.put(ID, nextId.getAndIncrement());
+		request.put(JSONRPC, JsonRpcBasicServer.VERSION);
+		request.put(METHOD, methodName);
+
+		if (arguments != null && arguments.getClass().isArray()) {
+			Object[] args = (Object[]) arguments;
+			if (args.length > 0) {
+				request.set(PARAMS, mapper.valueToTree(args));
+			}
+		} else if (arguments instanceof Collection) {
+			Collection<?> collection = (Collection<?>) arguments;
+			if (!collection.isEmpty()) {
+				request.set(PARAMS, mapper.valueToTree(arguments));
+			}
+		} else if (arguments instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>) arguments;
+			if (!map.isEmpty()) {
+				request.set(PARAMS, mapper.valueToTree(arguments));
+			}
+		} else if (arguments != null) {
+			request.set(PARAMS, mapper.valueToTree(arguments));
+		}
+
+		log.debug("JSON-RPC Request: {}", request);
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(512);
+		mapper.writeValue(baos, request);
+		return baos.toByteArray();
+	}
+
+	/**
+	 * Builds the HTTP request with headers.
+	 */
+	private HttpRequest buildHttpRequest(byte[] body, Map<String, String> extraHeaders) {
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(serviceUrl.toString()))
+				.header("Content-Type", "application/json")
+				.POST(HttpRequest.BodyPublishers.ofByteArray(body));
+
+		// Add default headers
+		for (Map.Entry<String, String> header : headers.entrySet()) {
+			builder.header(header.getKey(), header.getValue());
+		}
+
+		// Add extra headers (may override defaults)
+		for (Map.Entry<String, String> header : extraHeaders.entrySet()) {
+			builder.header(header.getKey(), header.getValue());
+		}
+
+		return builder.build();
+	}
+
+	/**
+	 * Handles the HTTP response and parses the JSON-RPC result.
+	 */
+	private <T> T handleResponse(HttpResponse<InputStream> response, Class<T> returnType) throws Throwable {
+		int statusCode = response.statusCode();
+
+		if (statusCode == 200) {
+			return readResponse(returnType, response.body());
+		} else {
+			// Read the error response body for a more descriptive error message
+			String errorBody = readErrorBody(response.body());
+			throw new Exception(statusCode + " " + getStatusMessage(statusCode) + (errorBody.isEmpty() ? "" : ": " + errorBody));
+		}
+	}
+
+	/**
+	 * Reads the response body as a string for error reporting.
+	 */
+	private String readErrorBody(InputStream inputStream) {
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int len;
+			while ((len = inputStream.read(buffer)) != -1) {
+				baos.write(buffer, 0, len);
+			}
+			return baos.toString("UTF-8").trim();
+		} catch (IOException e) {
+			return "";
+		}
+	}
+
+	/**
+	 * Returns a human-readable message for HTTP status codes.
+	 */
+	private String getStatusMessage(int statusCode) {
+		switch (statusCode) {
+			case 400: return "Bad Request";
+			case 401: return "Unauthorized";
+			case 403: return "Forbidden";
+			case 404: return "Not Found";
+			case 405: return "HTTP method POST is not supported by this URL";
+			case 500: return "Internal Server Error";
+			case 502: return "Bad Gateway";
+			case 503: return "Service Unavailable";
+			default: return "HTTP Error";
+		}
+	}
+
+	/**
+	 * Reads a JSON-RPC response from the server.
 	 *
 	 * @param returnType the expected return type
 	 * @param ips        the {@link InputStream} to read from
@@ -379,233 +396,61 @@ public class JsonRpcHttpAsyncClient {
 	 */
 	private <T> T readResponse(Type returnType, InputStream ips) throws Throwable {
 		JsonNode response = mapper.readTree(new NoCloseInputStream(ips));
-		logger.debug("JSON-RPC Response: {}", response);
+		log.debug("JSON-RPC Response: {}", response);
+
 		if (!response.isObject()) {
 			throw new JsonRpcClientException(0, "Invalid JSON-RPC response", response);
 		}
-		ObjectNode jsonObject = ObjectNode.class.cast(response);
-		
+
+		ObjectNode jsonObject = (ObjectNode) response;
+
 		if (jsonObject.has(ERROR) && jsonObject.get(ERROR) != null && !jsonObject.get(ERROR).isNull()) {
 			throw exceptionResolver.resolveException(jsonObject);
 		}
+
 		if (jsonObject.has(RESULT) && !jsonObject.get(RESULT).isNull() && jsonObject.get(RESULT) != null) {
-			
 			JsonParser returnJsonParser = mapper.treeAsTokens(jsonObject.get(RESULT));
 			JavaType returnJavaType = mapper.getTypeFactory().constructType(returnType);
-			
 			return mapper.readValue(returnJsonParser, returnJavaType);
 		}
+
 		return null;
 	}
-	
-	private void initialize() {
-		if (initialized.getAndSet(true)) {
-			return;
-		}
-		IOReactorConfig.Builder config = createConfig();
-		// params.setParameter(CoreProtocolPNames.USER_AGENT, "jsonrpc4j/1.0");
-		final ConnectingIOReactor ioReactor = createIoReactor(config);
-		createSslContext();
-		int socketBufferSize = Integer.getInteger("com.googlecode.jsonrpc4j.async.socket.buffer", 8 * 1024);
-		final ConnectionConfig connectionConfig = ConnectionConfig.custom().setBufferSize(socketBufferSize).build();
-		BasicNIOConnFactory nioConnFactory = new BasicNIOConnFactory(sslContext, null, connectionConfig);
-		pool = new BasicNIOConnPool(ioReactor, nioConnFactory, Integer.getInteger("com.googlecode.jsonrpc4j.async.connect.timeout", 30000));
-		pool.setDefaultMaxPerRoute(Integer.getInteger("com.googlecode.jsonrpc4j.async.max.inflight.route", 500));
-		pool.setMaxTotal(Integer.getInteger("com.googlecode.jsonrpc4j.async.max.inflight.total", 500));
 
-		Thread t = new Thread(
-			() -> {
-				try {
-					HttpAsyncRequestExecutor protocolHandler = new HttpAsyncRequestExecutor();
-					IOEventDispatch ioEventDispatch = new DefaultHttpClientIODispatch<>(
-						protocolHandler,
-						sslContext,
-						connectionConfig
-					);
-					ioReactor.execute(ioEventDispatch);
-				} catch (InterruptedIOException ex) {
-					System.err.println("Interrupted");
-				} catch (IOException e) {
-					System.err.println("I/O error: " + e.getMessage());
-				}
-			},
-			"jsonrpc4j HTTP IOReactor"
-		);
-
-		t.setDaemon(true);
-		t.start();
-		
-		HttpProcessor httpProcessor = new ImmutableHttpProcessor(new RequestContent(), new RequestTargetHost(), new RequestConnControl(), new RequestUserAgent(), new RequestExpectContinue(false));
-		requester = new HttpAsyncRequester(httpProcessor, new DefaultConnectionReuseStrategy());
-	}
-
-	private IOReactorConfig.Builder createConfig() {
-		IOReactorConfig.Builder config = IOReactorConfig.custom();
-		config = config.setSoTimeout(Integer.getInteger("com.googlecode.jsonrpc4j.async.socket.timeout", 30000));
-		config = config.setConnectTimeout(Integer.getInteger("com.googlecode.jsonrpc4j.async.connect.timeout", 30000));
-		config = config.setTcpNoDelay(Boolean.valueOf(System.getProperty("com.googlecode.jsonrpc4j.async.tcp.nodelay", "true")));
-		config = config.setIoThreadCount(Integer.getInteger("com.googlecode.jsonrpc4j.async.reactor.threads", 1));
-		return config;
-	}
-	
-	private ConnectingIOReactor createIoReactor(IOReactorConfig.Builder config) {
-		final ConnectingIOReactor ioReactor;
-		try {
-			ioReactor = new DefaultConnectingIOReactor(config.build());
-		} catch (IOReactorException e) {
-			throw new RuntimeException("Exception initializing asynchronous Apache HTTP Client", e);
-		}
-		return ioReactor;
-	}
-	
-	private void createSslContext() {
-		if (sslContext == null) {
-			try {
-				sslContext = SSLContext.getDefault();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
-	
-	private static class JsonRpcFuture<T> implements Future<T>, JsonRpcCallback<T> {
-		
-		private T object;
-		private volatile boolean done;
-		private ExecutionException exception;
-
-		private final Lock lock = new ReentrantLock();
-
-		private final Condition condition = lock.newCondition();
-		
-		public boolean cancel(boolean mayInterruptIfRunning) {
-			return false;
-		}
-		
-		public boolean isCancelled() {
-			return false;
-		}
-		
-		public boolean isDone() {
-			return done;
-		}
-		
-		public T get() throws InterruptedException,
-				ExecutionException {
-
-			lock.lock();
-			try {
-
-				while (!done) {
-					condition.await();
-				}
-
-				if (exception != null) {
-					throw exception;
-				}
-
-				return object;
-			} finally {
-				lock.unlock();
-			}
-		}
-		
-		public T get(long timeout, TimeUnit unit)
-				throws InterruptedException, ExecutionException,
-				TimeoutException {
-
-			if (timeout <= 0) {
-				throw new TimeoutException();
-			}
-
-			long nanos = unit.toNanos(timeout);
-			lock.lock();
-			try {
-				while (!done) {
-					if (nanos <= 0) {
-						throw new TimeoutException();
-					}
-					nanos = condition.awaitNanos(nanos);
-				}
-
-				if (exception != null) {
-					throw exception;
-				}
-				return object;
-			} finally {
-				lock.unlock();
-			}
-
-		}
-		
-		public void onComplete(T result) {
-			lock.lock();
-			try {
-				object = result;
-				done = true;
-				condition.signal();
-			} finally {
-				lock.unlock();
-			}
-		}
-		
-		public void onError(Throwable t) {
-			lock.lock();
-			try {
-				exception = new ExecutionException(t);
-				done = true;
-				condition.signal();
-			} finally {
-				lock.unlock();
-			}
-		}
-	}
-	
 	/**
-	 * Private class to handleRequest the HttpResponse callback.
-	 *
-	 * @param <T>
+	 * A Future implementation that wraps CompletableFuture for backwards compatibility.
 	 */
-	private class RequestAsyncFuture<T> implements FutureCallback<HttpResponse> {
-		private final JsonRpcCallback<T> callBack;
-		private final Class<T> type;
-		
-		RequestAsyncFuture(Class<T> type, JsonRpcCallback<T> callBack) {
-			this.type = type;
-			this.callBack = callBack;
+	private static class JsonRpcFuture<T> implements Future<T> {
+
+		private final CompletableFuture<T> delegate;
+
+		JsonRpcFuture(CompletableFuture<T> delegate) {
+			this.delegate = delegate;
 		}
-		
-		public void completed(final HttpResponse response) {
-			try {
-				StatusLine statusLine = response.getStatusLine();
-				int statusCode = statusLine.getStatusCode();
-				
-				InputStream stream;
-				if (statusCode == 200) {
-					HttpEntity entity = response.getEntity();
-					try {
-						stream = entity.getContent();
-					} catch (Exception e) {
-						failed(e);
-						return;
-					}
-					
-					callBack.onComplete(type.cast(readResponse(type, stream)));
-				} else {
-					callBack.onError(new RuntimeException(
-							"Unexpected response code: " + statusCode));
-				}
-			} catch (Throwable t) {
-				callBack.onError(t);
-			}
+
+		@Override
+		public boolean cancel(boolean mayInterruptIfRunning) {
+			return delegate.cancel(mayInterruptIfRunning);
 		}
-		
-		public void failed(final Exception ex) {
-			callBack.onError(ex);
+
+		@Override
+		public boolean isCancelled() {
+			return delegate.isCancelled();
 		}
-		
-		public void cancelled() {
-			callBack.onError(new RuntimeException("HTTP Request was cancelled"));
+
+		@Override
+		public boolean isDone() {
+			return delegate.isDone();
+		}
+
+		@Override
+		public T get() throws InterruptedException, ExecutionException {
+			return delegate.get();
+		}
+
+		@Override
+		public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+			return delegate.get(timeout, unit);
 		}
 	}
 }

@@ -1,11 +1,11 @@
 package com.googlecode.jsonrpc4j.spring.rest;
 
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JsonEncoding;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -157,13 +157,13 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 			throws IOException, HttpMessageNotWritableException {
 
 		final JsonEncoding encoding = getJsonEncoding(outputMessage.getHeaders().getContentType());
-		final JsonGenerator jsonGenerator = this.objectMapper.getFactory().createGenerator(outputMessage.getBody(), encoding);
+		final JsonGenerator jsonGenerator = this.objectMapper.createGenerator(outputMessage.getBody(), encoding);
 		try {
 			if (this.prefixJson) {
 				jsonGenerator.writeRaw("{} && ");
 			}
 			this.objectMapper.writeValue(jsonGenerator, object);
-		} catch (IOException ex) {
+		} catch (Exception ex) {
 			throw new HttpMessageNotWritableException("Could not write JSON: " + ex.getMessage(), ex);
 		}
 	}
