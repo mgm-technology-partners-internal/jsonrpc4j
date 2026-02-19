@@ -84,15 +84,15 @@ apply from: 'pom.gradle'
 allprojects {
     apply plugin: 'signing'
 
-    signing {
-        required {
-            // signing is required if this is a release version and the artifacts are to be published
-            releaseVersion && tasks.withType(PublishToMavenRepository).find {
-                gradle.taskGraph.hasTask it
-            }
-        }
-        sign publishing.publications
-    }
+//    signing {
+//        required {
+//            // signing is required if this is a release version and the artifacts are to be published
+//            releaseVersion && tasks.withType(PublishToMavenRepository).find {
+//                gradle.taskGraph.hasTask it
+//            }
+//        }
+//        sign publishing.publications
+//    }
 }
 
 apply plugin: NexusStagingPlugin

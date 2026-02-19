@@ -48,8 +48,9 @@ repositories {
 apply plugin: "java"
 apply plugin: "com.adarshr.test-logger"
 
-group = "com.github.briandilley.jsonrpc4j"
-version = "2.0-SNAPSHOT"
+//group = "com.github.briandilley.jsonrpc4j"
+group = "com.mgmtp.a12.jsonrpc4j"
+version = "2.0.0-dev.0"
 description = """
 This project aims to provide the facility to easily implement JSON-RPC for the java programming language.
 """
@@ -153,12 +154,12 @@ jar {
    }
 }
 
-task documentationJar(type: Jar) {
+tasks.register('documentationJar', Jar) {
     archiveClassifier.set("javadoc")
     from javadoc
 }
 
-task sourcesJar(type: Jar) {
+tasks.register('sourcesJar', Jar) {
     archiveClassifier.set("sources")
     from sourceSets.main.allSource
 }
