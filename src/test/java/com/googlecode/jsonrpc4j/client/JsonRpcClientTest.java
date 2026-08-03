@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.JsonRpcClient;
 import com.googlecode.jsonrpc4j.RequestIDGenerator;
 import org.junit.After;
@@ -72,7 +72,7 @@ public class JsonRpcClientTest {
 		JsonNode node = readJSON(byteArrayOutputStream);
 
 		assertTrue(node.has(auth));
-		assertEquals(node.get(auth).textValue(), authValue);
+		assertEquals(node.get(auth).asString(), authValue);
 	}
 
 	@Test
@@ -85,7 +85,7 @@ public class JsonRpcClientTest {
 
 		assertTrue(node.has(PARAMS));
 		assertTrue(node.get(PARAMS).isObject());
-		assertEquals("test", node.get(PARAMS).get("hello").textValue());
+		assertEquals("test", node.get(PARAMS).get("hello").asString());
 		assertEquals(1, node.get(PARAMS).get("x").intValue());
 	}
 
@@ -106,7 +106,7 @@ public class JsonRpcClientTest {
 
 		assertTrue(node.has(PARAMS));
 		assertTrue(node.get(PARAMS).isObject());
-		assertEquals("test", node.get(ID).asText());
+		assertEquals("test", node.get(ID).asString());
 	}
 
 	@Test
@@ -120,7 +120,7 @@ public class JsonRpcClientTest {
 		assertTrue(node.has(PARAMS));
 		assertTrue(node.get(PARAMS).isObject());
 		try {
-			Long.parseLong(node.get(ID).asText());
+			Long.parseLong(node.get(ID).asString());
 		} catch (NumberFormatException e) {
 			fail();
 		}

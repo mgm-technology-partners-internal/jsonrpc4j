@@ -1,10 +1,11 @@
 package com.googlecode.jsonrpc4j.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
+import tools.jackson.core.JacksonException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,16 +50,16 @@ public class Util {
 		return new ByteArrayInputStream(emptyLine.getBytes(StandardCharsets.UTF_8));
 	}
 	
-	public static InputStream messageWithListParamsStream(final Object id, final String methodName, final Object... args) throws JsonProcessingException {
+	public static InputStream messageWithListParamsStream(final Object id, final String methodName, final Object... args) throws JacksonException {
 		return createStream(messageWithListParams(id, methodName, args));
 	}
 	
-	public static InputStream createStream(Object content) throws JsonProcessingException {
+	public static InputStream createStream(Object content) throws JacksonException {
 		String data = mapper.writeValueAsString(content);
 		return new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
 	}
 	
-	public static HashMap<String, Object> messageWithListParams(final Object id, final String methodName, final Object... args) throws JsonProcessingException {
+	public static HashMap<String, Object> messageWithListParams(final Object id, final String methodName, final Object... args) throws JacksonException {
 		return messageOfStream(id, methodName, Arrays.asList(args));
 	}
 	
@@ -78,15 +79,15 @@ public class Util {
 		};
 	}
 	
-	public static InputStream multiMessageOfStream(Object... args) throws JsonProcessingException {
+	public static InputStream multiMessageOfStream(Object... args) throws JacksonException {
 		return createStream(args);
 	}
 	
-	public static InputStream messageWithMapParamsStream(final String methodName, final Object... args) throws JsonProcessingException {
+	public static InputStream messageWithMapParamsStream(final String methodName, final Object... args) throws JacksonException {
 		return createStream(messageWithMapParams(methodName, args));
 	}
 	
-	private static HashMap<String, Object> messageWithMapParams(final String methodName, final Object... args) throws JsonProcessingException {
+	private static HashMap<String, Object> messageWithMapParams(final String methodName, final Object... args) throws JacksonException {
 		Map<String, Object> elements = new HashMap<>();
 		for (int i = 0; i < args.length; i += 2) {
 			final String key = (String) args[i];
@@ -119,7 +120,10 @@ public class Util {
 	}
 	
 	public static JsonNode decodeAnswer(ByteArrayOutputStream byteArrayOutputStream) throws IOException {
-		return mapper.readTree(byteArrayOutputStream.toString(JSON_ENCODING));
+		// Use JsonParser to read only the first JSON value, ignoring any trailing content
+		// This is necessary because Jackson 3 by default fails on trailing tokens
+		JsonParser parser = mapper.createParser(byteArrayOutputStream.toString(JSON_ENCODING));
+		return (JsonNode) parser.readValueAsTree();
 	}
 	
 	public static JsonNode errorCode(JsonNode error) {

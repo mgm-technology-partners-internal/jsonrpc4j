@@ -1,13 +1,12 @@
 package com.googlecode.jsonrpc4j.spring;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.ConvertedParameterTransformer;
 import com.googlecode.jsonrpc4j.ErrorResolver;
 import com.googlecode.jsonrpc4j.HttpStatusCodeProvider;
 import com.googlecode.jsonrpc4j.InvocationListener;
 import com.googlecode.jsonrpc4j.JsonRpcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -36,9 +35,9 @@ import static org.springframework.util.ClassUtils.getAllInterfacesForClass;
  */
 @Deprecated
 @SuppressWarnings("unused")
+@Slf4j
 public class AutoJsonRpcServiceExporter implements BeanFactoryPostProcessor {
 
-	private static final Logger logger = LoggerFactory.getLogger(AutoJsonRpcServiceExporter.class);
 
 	private static final String PATH_PREFIX = "/";
 
@@ -64,7 +63,7 @@ public class AutoJsonRpcServiceExporter implements BeanFactoryPostProcessor {
 			JsonRpcService jsonRpcPath = beanFactory.findAnnotationOnBean(beanName, JsonRpcService.class);
 			if (hasServiceAnnotation(jsonRpcPath)) {
 				String pathValue = jsonRpcPath.value();
-				logger.debug("Found JSON-RPC path '{}' for bean [{}].", pathValue, beanName);
+				log.debug("Found JSON-RPC path '{}' for bean [{}].", pathValue, beanName);
 				if (isNotDuplicateService(serviceBeanNames, beanName, pathValue))
 					serviceBeanNames.put(pathValue, beanName);
 			}
@@ -87,7 +86,7 @@ public class AutoJsonRpcServiceExporter implements BeanFactoryPostProcessor {
 	private static boolean isNotDuplicateService(Map<String, String> serviceBeanNames, String beanName, String pathValue) {
 		if (serviceBeanNames.containsKey(pathValue)) {
 			String otherBeanName = serviceBeanNames.get(pathValue);
-			logger.debug("Duplicate JSON-RPC path specification: found {} on both [{}] and [{}].", pathValue, beanName, otherBeanName);
+			log.debug("Duplicate JSON-RPC path specification: found {} on both [{}] and [{}].", pathValue, beanName, otherBeanName);
 			return false;
 		}
 		return true;
@@ -123,7 +122,7 @@ public class AutoJsonRpcServiceExporter implements BeanFactoryPostProcessor {
 		for (Class<?> currentInterface : getBeanInterfaces(serviceBeanDefinition, defaultListableBeanFactory.getBeanClassLoader())) {
 			if (currentInterface.isAnnotationPresent(JsonRpcService.class)) {
 				String serviceInterface = currentInterface.getName();
-				logger.debug("Registering interface '{}' for JSON-RPC bean [{}].", serviceInterface, serviceBeanName);
+				log.debug("Registering interface '{}' for JSON-RPC bean [{}].", serviceInterface, serviceBeanName);
 				builder.addPropertyValue("serviceInterface", serviceInterface);
 				break;
 			}

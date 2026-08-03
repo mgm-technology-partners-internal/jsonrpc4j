@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
 import com.googlecode.jsonrpc4j.JsonRpcMethod;
 import org.easymock.EasyMock;
@@ -42,7 +42,7 @@ public class JsonRpcServerAnnotateMethodTest {
 		EasyMock.expect(mockService.customMethod()).andReturn(param1);
 		EasyMock.replay(mockService);
 		jsonRpcServerAnnotatedMethod.handleRequest(messageWithMapParamsStream("Test.custom"), byteArrayOutputStream);
-		assertEquals(param1, result().textValue());
+		assertEquals(param1, result().asString());
 	}
 	
 	private JsonNode result() throws IOException {
@@ -54,7 +54,7 @@ public class JsonRpcServerAnnotateMethodTest {
 		EasyMock.expect(mockService.customMethod()).andReturn(param1);
 		EasyMock.replay(mockService);
 		jsonRpcServerAnnotatedMethod.handleRequest(messageWithListParamsStream(1, "customMethod"), byteArrayOutputStream);
-		assertEquals(param1, result().textValue());
+		assertEquals(param1, result().asString());
 	}
 	
 	@Test
@@ -62,7 +62,7 @@ public class JsonRpcServerAnnotateMethodTest {
 		EasyMock.expect(mockService.customMethod2(param1)).andReturn(param2);
 		EasyMock.replay(mockService);
 		jsonRpcServerAnnotatedMethod.handleRequest(messageWithListParamsStream(1, "Test.custom2", param1), byteArrayOutputStream);
-		assertEquals(param2, result().textValue());
+		assertEquals(param2, result().asString());
 	}
 	
 	@Test
@@ -70,7 +70,7 @@ public class JsonRpcServerAnnotateMethodTest {
 		EasyMock.expect(mockService.customMethod2(param1)).andReturn(param2);
 		EasyMock.replay(mockService);
 		jsonRpcServerAnnotatedMethod.handleRequest(messageWithListParamsStream(1, "customMethod2", param1), byteArrayOutputStream);
-		assertEquals(param2, result().textValue());
+		assertEquals(param2, result().asString());
 	}
 	
 	public interface ServiceInterfaceWithCustomMethodNameAnnotation {

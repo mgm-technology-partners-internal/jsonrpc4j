@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcClient;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 import com.googlecode.jsonrpc4j.ProxyUtil;
@@ -51,9 +51,15 @@ public class LocalThreadServer<T> extends Thread implements AutoCloseable {
 				final int available = serverInput.available();
 				if (available > 0) {
 					jsonRpcServer.handleRequest(serverInput, serverOutput);
+				} else {
+					// Small sleep to avoid busy waiting and give time for data to arrive
+					Thread.sleep(1);
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
 			}
 		}
 		

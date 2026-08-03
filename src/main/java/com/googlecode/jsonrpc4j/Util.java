@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 
 public class Util {
 	
@@ -16,6 +16,6 @@ public class Util {
 	}
 	
 	static boolean hasNonNullTextualData(final ObjectNode node, final String key) {
-		return hasNonNullData(node, key) && node.get(key).isTextual();
+		return hasNonNullData(node, key) && node.get(key).isString();
 	}
 }

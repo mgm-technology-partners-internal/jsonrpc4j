@@ -1,7 +1,9 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.TreeNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,10 +14,12 @@ public class ReadContext {
 	
 	private final InputStream input;
 	private final ObjectMapper mapper;
+	private JsonParser parser;
 	
 	private ReadContext(InputStream input, ObjectMapper mapper) {
 		this.input = new NoCloseInputStream(input);
 		this.mapper = mapper;
+		this.parser = null;
 	}
 	
 	public static ReadContext getReadContext(InputStream input, ObjectMapper mapper) {
@@ -23,7 +27,14 @@ public class ReadContext {
 	}
 	
 	public JsonNode nextValue() throws IOException {
-		return mapper.readValue(input, JsonNode.class);
+		// Lazy initialization of parser - create once and reuse for streaming reads
+		if (parser == null) {
+			parser = mapper.createParser(input);
+		}
+		// Use readValueAsTree which reads exactly one JSON value and advances the parser
+		// This properly handles streaming scenarios where multiple JSON objects are in the stream
+		TreeNode tree = parser.readValueAsTree();
+		return (JsonNode) tree;
 	}
 	
 	public void assertReadable() throws IOException {

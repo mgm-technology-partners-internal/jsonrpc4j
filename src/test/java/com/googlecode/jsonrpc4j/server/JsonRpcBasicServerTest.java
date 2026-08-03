@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.ConvertedParameterTransformer;
 import com.googlecode.jsonrpc4j.ErrorResolver.JsonError;
 import com.googlecode.jsonrpc4j.InvocationListener;
@@ -72,7 +72,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.testMethod(param1)).andReturn(param1);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "testMethod", param1), byteArrayOutputStream);
-		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -89,7 +89,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.replay(mockService);
 		jsonRpcServer.setAllowExtraParams(true);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", param1, param2, param3), byteArrayOutputStream);
-		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -98,7 +98,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.replay(mockService);
 		jsonRpcServer.setAllowLessParams(true);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "testMethod"), byteArrayOutputStream);
-		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -107,7 +107,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.replay(mockService);
 		jsonRpcServer.setAllowExtraParams(true);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "testMethod", param1), byteArrayOutputStream);
-		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -116,7 +116,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.replay(mockService);
 		jsonRpcServer.setAllowExtraParams(true);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "testMethod", param1, param2), byteArrayOutputStream);
-		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -125,7 +125,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.overloadedMethod()).andReturn(noParam);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod"), byteArrayOutputStream);
-		assertEquals(noParam, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(noParam, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -133,7 +133,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.overloadedMethod(param2)).andReturn(param2);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", param2), byteArrayOutputStream);
-		assertEquals(param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -141,7 +141,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.overloadedMethod(intParam1)).andReturn(param1 + intParam1);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", intParam1), byteArrayOutputStream);
-		assertEquals(param1 + intParam1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1 + intParam1, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -149,7 +149,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.overloadedMethod(param1, param2)).andReturn(param1 + param2);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", param1, param2), byteArrayOutputStream);
-		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -158,7 +158,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.overloadedMethod(intParam1, intParam2)).andReturn(result);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", intParam1, intParam2), byteArrayOutputStream);
-		assertEquals(result, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(result, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 	
 	@Test
@@ -167,7 +167,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.replay(mockService);
 		jsonRpcServer.setAllowExtraParams(true);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", param1, param2, param3), byteArrayOutputStream);
-		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1 + param2, decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).asString());
 	}
 
 	@Test
@@ -178,7 +178,8 @@ public class JsonRpcBasicServerTest {
 			messageWithListParamsStream(1, "voidMethod", intParam1),
 			byteArrayOutputStream
 		);
-		assertNull(decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).textValue());
+		// In Jackson 3, NullNode.asString() returns "" instead of null, so use isNull() instead
+		assertTrue(decodeAnswer(byteArrayOutputStream).get(JsonRpcBasicServer.RESULT).isNull());
 		EasyMock.verify(mockService);
 	}
 	
@@ -203,7 +204,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.expect(mockService.testMethod(param1)).andReturn(param1);
 		EasyMock.replay(mockService);
 		jsonRpcServer.handleRequest(messageWithListParamsStream(param1, "testMethod", param1), byteArrayOutputStream);
-		assertTrue(decodeAnswer(byteArrayOutputStream).get(ID).isTextual());
+		assertTrue(decodeAnswer(byteArrayOutputStream).get(ID).isString());
 	}
 	
 	@Test
@@ -283,7 +284,7 @@ public class JsonRpcBasicServerTest {
 		EasyMock.verify(invocationListener, mockService);
 		
 		JsonNode json = decodeAnswer(byteArrayOutputStream);
-		assertEquals(param1, json.get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals(param1, json.get(JsonRpcBasicServer.RESULT).asString());
 		assertNull(json.get(JsonRpcBasicServer.ERROR));
 	}
 	
@@ -320,7 +321,7 @@ public class JsonRpcBasicServerTest {
 		jsonRpcServer.handleRequest(messageWithListParamsStream(1, "overloadedMethod", (Object[]) parameters), byteArrayOutputStream);
 		
 		JsonNode json = decodeAnswer(byteArrayOutputStream);
-		assertEquals("converted", json.get(JsonRpcBasicServer.RESULT).textValue());
+		assertEquals("converted", json.get(JsonRpcBasicServer.RESULT).asString());
 		assertNull(json.get(JsonRpcBasicServer.ERROR));
 	}
 	
@@ -335,8 +336,8 @@ public class JsonRpcBasicServerTest {
 		jsonRpcServer.handleRequest(input, byteArrayOutputStream);
 		JsonNode json = decodeAnswer(byteArrayOutputStream);
 		assertTrue(json.isArray());
-		assertEquals(getFromArrayWithId(json, 1).get(JsonRpcBasicServer.RESULT).asText(), param2);
-		assertEquals(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.RESULT).asText(), param1);
+		assertEquals(getFromArrayWithId(json, 1).get(JsonRpcBasicServer.RESULT).asString(), param2);
+		assertEquals(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.RESULT).asString(), param1);
 		EasyMock.verify(mockService);
 	}
 	
@@ -352,10 +353,10 @@ public class JsonRpcBasicServerTest {
 		jsonRpcServer.handleRequest(input, byteArrayOutputStream);
 		JsonNode json = decodeAnswer(byteArrayOutputStream);
 		assertTrue(json.isArray());
-		assertEquals(getFromArrayWithId(json, 1).get(JsonRpcBasicServer.RESULT).asText(), param2);
+		assertEquals(getFromArrayWithId(json, 1).get(JsonRpcBasicServer.RESULT).asString(), param2);
 		assertEquals(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.RESULT), null);
 		assertFalse(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.ERROR).isNull());
-		assertEquals(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.ERROR).get(JsonRpcBasicServer.DATA).get(JsonRpcBasicServer.ERROR_MESSAGE).asText(), param4);
+		assertEquals(getFromArrayWithId(json, 2).get(JsonRpcBasicServer.ERROR).get(JsonRpcBasicServer.DATA).get(JsonRpcBasicServer.ERROR_MESSAGE).asString(), param4);
 		EasyMock.verify(mockService);
 	}
 
@@ -388,12 +389,11 @@ public class JsonRpcBasicServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"overloadedMethod\",\n" +
 				"  \"params\": [\"test.cool\",\"test.ru\"]\n" +
-				"  }\n" +
 				"}";
 		final String responseGood = "{\n" +
                 "  \"jsonrpc\": \"2.0\",\n" +
                 "  \"id\": 0,\n" +
-				"  \"result\": \"test.ru\"}\n" +
+				"  \"result\": \"test.ru\"\n" +
 				"}";
         Iterator<JsonNode> paramsIterator = mapper.readTree(requestGood).at("/params").iterator();
         List<JsonNode> paramsNodes = new ArrayList<>();

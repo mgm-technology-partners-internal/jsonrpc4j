@@ -1,12 +1,12 @@
 package com.googlecode.jsonrpc4j;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.node.*;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.*;
+import tools.jackson.databind.node.*;
 import com.googlecode.jsonrpc4j.ErrorResolver.JsonError;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import tools.jackson.core.exc.StreamReadException;
+import tools.jackson.databind.DatabindException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -32,6 +32,7 @@ import static com.googlecode.jsonrpc4j.Util.hasNonNullData;
  * A JSON-RPC request server reads JSON-RPC requests from an input stream and writes responses to an output stream.
  * Can even run on Android system.
  */
+@Slf4j
 public class JsonRpcBasicServer {
 	
 	public static final String JSONRPC_CONTENT_TYPE = "application/json-rpc";
@@ -51,7 +52,6 @@ public class JsonRpcBasicServer {
 	public static final int CODE_OK = 0;
 	public static final String NAME = "name";
 	public static final String NULL = "null";
-	private static final Logger logger = LoggerFactory.getLogger(JsonRpcBasicServer.class);
 	private static final ErrorResolver DEFAULT_ERROR_RESOLVER = new MultipleErrorResolver(AnnotationsErrorResolver.INSTANCE, DefaultErrorResolver.INSTANCE);
 	private static final Pattern BASE64_PATTERN = Pattern.compile("[A-Za-z0-9_=-]+");
 	
@@ -99,7 +99,7 @@ public class JsonRpcBasicServer {
 		this.remoteInterface = remoteInterface;
 		this.webParamAnnotationClasses = loadWebParamAnnotationClasses();
 		if (handler != null) {
-			logger.debug("created server for interface {} with handler {}", remoteInterface, handler.getClass());
+			log.debug("created server for interface {} with handler {}", remoteInterface, handler.getClass());
 		}
 	}
 	
@@ -138,12 +138,12 @@ public class JsonRpcBasicServer {
 				clazz.getMethod(NAME);
 				webParamClasses.add(clazz);
 			} catch (ClassNotFoundException | NoSuchMethodException e) {
-				logger.debug("Could not find {}.{}", className, NAME);
+				log.debug("Could not find {}.{}", className, NAME);
 			}
 		}
 
 		if (webParamClasses.isEmpty()) {
-			logger.debug(
+			log.debug(
 				"Could not find any @WebParam classes in classpath." +
 					" @WebParam support is disabled"
 			);
@@ -254,7 +254,7 @@ public class JsonRpcBasicServer {
 			    throw jsonResponse.getExceptionToRethrow();
             }
 			return jsonResponse.getCode();
-        } catch (JsonParseException | JsonMappingException e) {
+        } catch (StreamReadException | DatabindException e) {
             JsonResponse responseError = createResponseError(VERSION, NULL, JsonError.PARSE_ERROR);
             writeAndFlushValue(output, responseError.getResponse());
             return responseError.getCode();
@@ -282,11 +282,11 @@ public class JsonRpcBasicServer {
 	 *
 	 * @param node the {@link JsonNode}
 	 * @return the {@link JsonResponse} instance
-	 * @throws JsonParseException when {@link JsonNode} read fails
-	 * @throws JsonMappingException when {@link JsonNode} read fails
+	 * @throws StreamReadException when {@link JsonNode} read fails
+	 * @throws DatabindException when {@link JsonNode} read fails
 	 */
     protected JsonResponse handleJsonNodeRequest(final JsonNode node)
-            throws JsonParseException, JsonMappingException {
+            throws StreamReadException, DatabindException {
         if (node.isArray()) {
             return handleArray((ArrayNode) node);
         }
@@ -304,7 +304,7 @@ public class JsonRpcBasicServer {
 	 * @return the {@link JsonResponse} instance
 	 */
 	private JsonResponse handleArray(ArrayNode node) {
-        logger.debug("Handling {} requests", node.size());
+        log.debug("Handling {} requests", node.size());
 
         if (batchExecutorService != null) {
             return getBatchResponseInParallel(node);
@@ -340,7 +340,7 @@ public class JsonRpcBasicServer {
             }
         }
 
-        logger.debug("served {} requests, error {}, result {}", node.size(), errorCount, result);
+        log.debug("served {} requests, error {}, result {}", node.size(), errorCount, result);
 
         response.setResponse(batchResult);
         response.setCode(result.getCode());
@@ -377,7 +377,7 @@ public class JsonRpcBasicServer {
             }
         }
 
-        logger.debug("served {} requests, error {}, result {}", node.size(), errorCount, result);
+        log.debug("served {} requests, error {}, result {}", node.size(), errorCount, result);
 
         response.setResponse(batchResult);
         response.setCode(result.getCode());
@@ -420,20 +420,20 @@ public class JsonRpcBasicServer {
 	 * @return the {@link JsonResponse} instance
 	 */
 	private JsonResponse handleObject(final ObjectNode node)
-			throws JsonParseException, JsonMappingException {
-		logger.debug("Request: {}", node);
+			throws StreamReadException, DatabindException {
+		log.debug("Request: {}", node);
 		
 		if (!isValidRequest(node)) {
 			return createResponseError(VERSION, NULL, JsonError.INVALID_REQUEST);
 		}
 		Object id = parseId(node.get(ID));
 		
-		String jsonRpc = hasNonNullData(node, JSONRPC) ? node.get(JSONRPC).asText() : VERSION;
+		String jsonRpc = hasNonNullData(node, JSONRPC) ? node.get(JSONRPC).asString() : VERSION;
 		if (!hasNonNullData(node, METHOD)) {
 			return createResponseError(jsonRpc, id, JsonError.METHOD_NOT_FOUND);
 		}
 
-		final String fullMethodName = node.get(METHOD).asText();
+		final String fullMethodName = node.get(METHOD).asString();
 		final String partialMethodName = getMethodName(fullMethodName);
 		final String serviceName = getServiceName(fullMethodName);
 		
@@ -466,7 +466,7 @@ public class JsonRpcBasicServer {
 					return createResponseSuccess(jsonRpc, id, handler.result);
 				}
 				return new JsonResponse(null, JsonError.OK.code);
-			} catch (JsonParseException | JsonMappingException e) {
+			} catch (StreamReadException | DatabindException e) {
 				throw e; // rethrow this, it will be handled as PARSE_ERROR later
 			} catch (ParameterConvertException pce) {
 				handler.error = pce.getCause();
@@ -492,7 +492,7 @@ public class JsonRpcBasicServer {
 		Throwable unwrappedException = getException(e);
 		
 		if (shouldLogInvocationErrors) {
-			logger.warn("Error in JSON-RPC Service", unwrappedException);
+			log.warn("Error in JSON-RPC Service", unwrappedException);
 		}
 		
 		JsonError error = resolveError(methodArgs, unwrappedException);
@@ -586,7 +586,7 @@ public class JsonRpcBasicServer {
 	 * @throws InvocationTargetException on error
 	 */
 	private JsonNode invoke(Object target, Method method, List<JsonNode> params) throws IOException, IllegalAccessException, InvocationTargetException {
-		logger.debug("Invoking method: {} with args {}", method.getName(), params);
+		log.debug("Invoking method: {} with args {}", method.getName(), params);
 
 		Object result;
 
@@ -603,7 +603,7 @@ public class JsonRpcBasicServer {
 			result = method.invoke(target, convertedParams);
         }
 
-		logger.debug("Invoked method: {}, result {}", method.getName(), result);
+		log.debug("Invoked method: {}, result {}", method.getName(), result);
 
 		return hasReturnValue(method) ? mapper.valueToTree(result) : null;
 	}
@@ -638,7 +638,7 @@ public class JsonRpcBasicServer {
 		try {
 			object = mapper.convertValue(jsonNode, type);
 		} catch (IllegalArgumentException e) {
-			logger.debug(
+			log.debug(
 				"[{}] Failed to convert param: {} -> {}",
 				method.getName(),
 				paramIndex,
@@ -646,7 +646,7 @@ public class JsonRpcBasicServer {
 			);
 			throw new ParameterConvertException(paramIndex, e);
 		}
-		logger.debug("[{}] param: {} -> {}", method.getName(), paramIndex, type.getName());
+		log.debug("[{}] param: {} -> {}", method.getName(), paramIndex, type.getName());
 		return object;
 	}
 
@@ -667,8 +667,8 @@ public class JsonRpcBasicServer {
 					.with(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 			try {
 				convertedParams[i] = reader.readValue(paramJsonParser);
-			} catch (JsonParseException | JsonMappingException e) {
-				logger.debug(
+			} catch (StreamReadException | DatabindException e) {
+				log.debug(
 					"[{}] Failed to convert param: {} -> {}",
 					m.getName(),
 					i,
@@ -780,7 +780,7 @@ public class JsonRpcBasicServer {
 	
 	private Set<String> collectFieldNames(JsonNode paramsNode) {
 		Set<String> fieldNames = new HashSet<>();
-		Iterator<String> itr = paramsNode.fieldNames();
+		Iterator<String> itr = paramsNode.propertyNames().iterator();
 		while (itr.hasNext()) {
 			fieldNames.add(itr.next());
 		}
@@ -959,7 +959,7 @@ public class JsonRpcBasicServer {
 		if (node.isNull()) {
 			return true;
 		}
-		if (node.isTextual()) {
+		if (node.isString()) {
 			return String.class.isAssignableFrom(type);
 		}
 		if (node.isNumber()) {
@@ -1006,7 +1006,7 @@ public class JsonRpcBasicServer {
 	    if (value == null) {
 	        return;
         }
-		logger.debug("Response: {}", value);
+		log.debug("Response: {}", value);
 
 	    mapper.writeValue(new NoCloseOutputStream(output), value);
 		output.write('\n');
@@ -1032,8 +1032,8 @@ public class JsonRpcBasicServer {
 		if (node.isIntegralNumber()) {
 			return node.asInt();
 		}
-		if (node.isTextual()) {
-			return node.asText();
+		if (node.isString()) {
+			return node.asString();
 		}
 		throw new IllegalArgumentException("Unknown id type");
 	}
@@ -1216,9 +1216,7 @@ public class JsonRpcBasicServer {
 
 			if (node.isObject()) {
 				ObjectNode objectNode = (ObjectNode) node;
-				Iterator<Map.Entry<String,JsonNode>> items = objectNode.fields();
-				while (items.hasNext()) {
-					Map.Entry<String,JsonNode> item = items.next();
+				for (Map.Entry<String, JsonNode> item : objectNode.properties()) {
 					JsonNode name = JsonNodeFactory.instance.objectNode().put(item.getKey(),item.getKey());
 					addArgument(name.get(item.getKey()));
 					addArgument(item.getValue());

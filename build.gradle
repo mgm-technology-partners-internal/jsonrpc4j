@@ -1,12 +1,10 @@
 buildscript {
 
     ext {
-        set("jacksonVersion", "2.19.0")
-        // Versions 6.0.0 and above no longer support Java 1.8
-        set("springVersion", "5.3.39")
-        // Versions 3.0.0 and above no longer support Java 1.8
-        set("springBootVersion", "2.7.18")
-        set("jettyVersion", "9.4.57.v20241219")
+        set("jacksonVersion", "3.0.4")
+        set("springVersion", "7.0.4")
+        set("springBootVersion", "3.5.0")
+        set("jettyVersion", "12.0.20")
         set("slf4jVersion", "2.0.17")
     }
 
@@ -24,6 +22,21 @@ buildscript {
 
 plugins {
     id('jacoco')
+    id('org.openrewrite.rewrite') version '7.26.0'
+}
+
+rewrite {
+    activeRecipe(
+        'org.openrewrite.java.jackson.UpgradeJackson_2_3',
+        'org.openrewrite.java.spring.framework.UpgradeSpringFramework_7_0',
+        'org.openrewrite.java.migrate.jakarta.JakartaEE10'
+    )
+}
+
+dependencies {
+    rewrite('org.openrewrite.recipe:rewrite-jackson:1.16.0')
+    rewrite('org.openrewrite.recipe:rewrite-spring:6.24.1')
+    rewrite('org.openrewrite.recipe:rewrite-migrate-java:3.27.1')
 }
 
 repositories {
@@ -35,8 +48,9 @@ repositories {
 apply plugin: "java"
 apply plugin: "com.adarshr.test-logger"
 
-group = "com.github.briandilley.jsonrpc4j"
-version = "1.8.0-SNAPSHOT"
+//group = "com.github.briandilley.jsonrpc4j"
+group = "com.mgmtp.a12.jsonrpc4j"
+version = "2.0.0"
 description = """
 This project aims to provide the facility to easily implement JSON-RPC for the java programming language.
 """
@@ -98,18 +112,18 @@ dependencies {
 
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
-    // TODO: remove deprecated portlet-api when support is removed from the code
-    servletSupportImplementation 'javax.portlet:portlet-api:3.0.1'
-    servletSupportImplementation 'javax.servlet:javax.servlet-api:4.0.1'
-    // TODO: Jakarta EE 9 and jakarta.servlet-api 5.x are still compatible with Java SE 8,
-    // update jakarta.servlet-api to version 6+ when JDK baseline is increased to 11+
-    servletSupportImplementation 'jakarta.servlet:jakarta.servlet-api:5.0.0'
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+    testCompileOnly 'org.projectlombok:lombok:1.18.36'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
+
+    // Jakarta Servlet API for servlet support
+    servletSupportImplementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
 
     implementation group: 'jakarta.jws', name: 'jakarta.jws-api', version: '3.0.0'
 
-    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+    implementation("tools.jackson.core:jackson-core:3.0.4")
+    implementation("tools.jackson.core:jackson-databind:3.0.4")
 
     springSupportImplementation "org.springframework:spring-core:${springVersion}"
     springSupportImplementation "org.springframework:spring-context:${springVersion}"
@@ -117,7 +131,6 @@ dependencies {
     springSupportImplementation "org.springframework:spring-webmvc:${springVersion}"
 
     implementation 'commons-codec:commons-codec:1.18.0'
-    implementation 'org.apache.httpcomponents:httpcore-nio:4.4.16'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.easymock:easymock:5.5.0'
@@ -128,9 +141,7 @@ dependencies {
     testImplementation("org.eclipse.jetty:jetty-server:${jettyVersion}") {
         exclude module: 'javax.servlet'
     }
-    testImplementation("org.eclipse.jetty:jetty-servlet:${jettyVersion}") {
-        exclude module: 'org.eclipse.jetty.orbit'
-    }
+    testImplementation("org.eclipse.jetty.ee10:jetty-ee10-servlet:${jettyVersion}")
     testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.24.3'
     testRuntimeOnly 'org.apache.logging.log4j:log4j-core:2.24.3'
 
@@ -143,12 +154,12 @@ jar {
    }
 }
 
-task documentationJar(type: Jar) {
+tasks.register('documentationJar', Jar) {
     archiveClassifier.set("javadoc")
     from javadoc
 }
 
-task sourcesJar(type: Jar) {
+tasks.register('sourcesJar', Jar) {
     archiveClassifier.set("sources")
     from sourceSets.main.allSource
 }

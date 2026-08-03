@@ -1,10 +1,9 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 import com.googlecode.jsonrpc4j.JsonRpcMultiServer;
 import com.googlecode.jsonrpc4j.JsonRpcParam;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
@@ -15,6 +14,8 @@ import org.easymock.MockType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
 import java.beans.Transient;
 import java.io.ByteArrayOutputStream;
@@ -51,7 +52,7 @@ public class MultiServiceTest {
 		
 		multiServer.handleRequest(messageWithMapParamsStream(serviceName + JsonRpcMultiServer.DEFAULT_SEPARATOR + "testMethod", param1, param2), byteArrayOutputStream);
 		
-		assertEquals("success", decodeAnswer(byteArrayOutputStream).get(RESULT).textValue());
+		assertEquals("success", decodeAnswer(byteArrayOutputStream).get(RESULT).asString());
 	}
 
 	/** Test that verifies the custom ObjectMapper is actually used for serialization
@@ -59,16 +60,15 @@ public class MultiServiceTest {
 	@Test
 	public void testCustomObjectMapperConstructor() throws Exception {
 		
-		ObjectMapper customMapper = new ObjectMapper();
-		SimpleModule module = new SimpleModule();
-		
-		module.addSerializer(String.class, new JsonSerializer<String>() {
-			@Override
-			public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-				gen.writeString(value.toUpperCase());
-			}
-		});
-		customMapper.registerModule(module);
+		ObjectMapper customMapper = JsonMapper.builder()
+			.addModule(new SimpleModule()
+				.addSerializer(String.class, new ValueSerializer<>() {
+					@Override
+					public void serialize(String value, JsonGenerator gen, SerializationContext serializers) {
+						gen.writeString(value.toUpperCase());
+					}
+				}))
+			.build();
 		
 		JsonRpcMultiServer customServer = new JsonRpcMultiServer(customMapper);
 		customServer.addService(serviceName, mockService, ServiceInterfaceWithParamNameAnnotation.class);
@@ -80,7 +80,7 @@ public class MultiServiceTest {
 		customServer.handleRequest(messageWithMapParamsStream(serviceName + JsonRpcMultiServer.DEFAULT_SEPARATOR + "testMethod", param1, param2), customOutput);
 		
 		// If the custom ObjectMapper is used, the result should be in uppercase
-		String result = decodeAnswer(customOutput).get(RESULT).textValue();
+		String result = decodeAnswer(customOutput).get(RESULT).asString();
 		assertEquals("CUSTOM-RESULT-LOWERCASE", result);
 	}
 

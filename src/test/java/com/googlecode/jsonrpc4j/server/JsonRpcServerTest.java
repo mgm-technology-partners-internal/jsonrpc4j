@@ -1,7 +1,6 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.ErrorResolver;
 import com.googlecode.jsonrpc4j.JsonRpcInterceptor;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
@@ -16,8 +15,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import tools.jackson.databind.node.StringNode;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -119,8 +119,8 @@ public class JsonRpcServerTest {
 		JsonNode responseEnvelope = decodeAnswer(toByteArrayOutputStream(response.getContentAsByteArray()));
 		assertTrue(responseEnvelope.get(ID).isIntegralNumber());
 		assertEquals(responseEnvelope.get(ID).asLong(), 123L);
-		assertTrue(responseEnvelope.get(RESULT).isTextual());
-		assertEquals(responseEnvelope.get(RESULT).asText(), "For?est");
+		assertTrue(responseEnvelope.get(RESULT).isString());
+		assertEquals(responseEnvelope.get(RESULT).asString(), "For?est");
 	}
 
 	@Test
@@ -206,7 +206,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String responseError = "{\"jsonrpc\":\"2.0\",\"id\":0,\"error\":{\"code\":-32001,\"message\":\"" +
@@ -236,7 +235,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String returnString = "test";
@@ -245,14 +243,14 @@ public class JsonRpcServerTest {
 				exceptionMessage + "\"}}}";
 
 		//
-		expect(mockService.testMethod(mapper.readTree(requestGood).at("/params/0").asText())).andReturn(returnString);
+		expect(mockService.testMethod(mapper.readTree(requestGood).at("/params/0").asString())).andReturn(returnString);
 		mockInterceptor.postHandle(
 				anyObject(),
 				anyObject(Method.class),
 				eq(new ArrayList<JsonNode>() {{
 					add(mapper.readTree(requestGood).at("/params/0"));
 				}}),
-				eq(new TextNode(returnString))
+				eq(new StringNode(returnString))
 		);
 		expectLastCall().andThrow(new RuntimeException(exceptionMessage));
 
@@ -269,7 +267,6 @@ public class JsonRpcServerTest {
 				"  \"jsonrpc\": \"2.0\",\n" +
 				"  \"method\": \"testMethod\",\n" +
 				"  \"params\": [\"test.cool\"]\n" +
-				"  }\n" +
 				"}";
 		String exceptionMessage = "123";
 		String returnString = "test";
@@ -278,7 +275,7 @@ public class JsonRpcServerTest {
 				exceptionMessage + "\"}}}";
 
 		//
-		expect(mockService.testMethod(mapper.readTree(requestGood).at("/params/0").asText())).andReturn(returnString);
+		expect(mockService.testMethod(mapper.readTree(requestGood).at("/params/0").asString())).andReturn(returnString);
 		mockInterceptor.postHandleJson(anyObject(JsonNode.class));
 		expectLastCall().andThrow(new RuntimeException(exceptionMessage));
 

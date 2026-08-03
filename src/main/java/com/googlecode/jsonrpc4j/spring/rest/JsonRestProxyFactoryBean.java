@@ -1,19 +1,20 @@
 package com.googlecode.jsonrpc4j.spring.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.ExceptionResolver;
 import com.googlecode.jsonrpc4j.JsonRpcClient;
 import com.googlecode.jsonrpc4j.JsonRpcClient.RequestListener;
 import com.googlecode.jsonrpc4j.ReflectionUtil;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.remoting.support.UrlBasedRemoteAccessor;
+import com.googlecode.jsonrpc4j.spring.UrlBasedRemoteAccessor;
 import org.springframework.web.client.RestTemplate;
 
 import javax.net.ssl.HostnameVerifier;
@@ -29,8 +30,10 @@ import java.util.Map;
  * @param <T> the bean type
  * @author toha
  */
+@Slf4j
 @SuppressWarnings("unused")
 class JsonRestProxyFactoryBean<T> extends UrlBasedRemoteAccessor implements MethodInterceptor, InitializingBean, FactoryBean<T>, ApplicationContextAware {
+
 
 	private T proxyObject = null;
 	private RequestListener requestListener = null;
@@ -66,7 +69,7 @@ class JsonRestProxyFactoryBean<T> extends UrlBasedRemoteAccessor implements Meth
 				try {
 					objectMapper = BeanFactoryUtils.beanOfTypeIncludingAncestors(applicationContext, ObjectMapper.class);
 				} catch (Exception e) {
-					logger.debug(e);
+					log.debug("Could not find ObjectMapper in application context", e);
 				}
 			}
 			

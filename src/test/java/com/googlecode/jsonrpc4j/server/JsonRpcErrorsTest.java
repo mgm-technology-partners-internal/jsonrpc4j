@@ -1,6 +1,6 @@
 package com.googlecode.jsonrpc4j.server;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.googlecode.jsonrpc4j.ErrorResolver;
 import com.googlecode.jsonrpc4j.JsonRpcBasicServer;
 import com.googlecode.jsonrpc4j.JsonRpcError;
@@ -20,6 +20,7 @@ import static com.googlecode.jsonrpc4j.util.Util.mapper;
 import static com.googlecode.jsonrpc4j.util.Util.messageWithListParamsStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * For testing the @JsonRpcErrors and @JsonRpcError annotations
@@ -54,11 +55,12 @@ public class JsonRpcErrorsTest {
 		JsonNode error = error(byteArrayOutputStream);
 		assertNotNull(error);
 		assertEquals(1234, errorCode(error).intValue());
-		assertEquals(null, errorMessage(error).textValue());
+		// In Jackson 3, NullNode.asString() returns "" instead of null, so use isNull()
+		assertTrue(errorMessage(error).isNull());
 		JsonNode data = errorData(error);
 		assertNotNull(data);
-		assertEquals(null, errorMessage(data).textValue());
-		assertEquals(CustomTestException.class.getName(), exceptionType(data).textValue());
+		assertTrue(errorMessage(data).isNull());
+		assertEquals(CustomTestException.class.getName(), exceptionType(data).asString());
 	}
 	
 	@Test
@@ -70,7 +72,7 @@ public class JsonRpcErrorsTest {
 		
 		assertNotNull(error);
 		assertEquals(-5678, errorCode(error).intValue());
-		assertEquals("The message", errorMessage(error).textValue());
+		assertEquals("The message", errorMessage(error).asString());
 	}
 	
 	@Test
@@ -82,11 +84,11 @@ public class JsonRpcErrorsTest {
 		
 		assertNotNull(error);
 		assertEquals(1234, errorCode(error).intValue());
-		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(error).textValue());
+		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(error).asString());
 		JsonNode data = errorData(error);
 		assertNotNull(data);
-		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(data).textValue());
-		assertEquals(CustomTestException.class.getName(), exceptionType(data).textValue());
+		assertEquals(testExceptionWithMessage.getMessage(), errorMessage(data).asString());
+		assertEquals(CustomTestException.class.getName(), exceptionType(data).asString());
 	}
 	
 	@SuppressWarnings({"unused", "WeakerAccess"})
